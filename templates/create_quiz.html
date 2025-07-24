@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Créer un Quiz - {{ session.title }}{% endblock %}
+{% block content %}
+<div class="container">
+    <h1>Créer un Quiz pour {{ session.title }}</h1>
+    <form method="POST">
+        <div class="mb-3">
+            <label class="form-label">Question</label>
+            <textarea name="question" class="form-control" required></textarea>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Option 1</label>
+            <input type="text" name="option1" class="form-control" required>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Option 2</label>
+            <input type="text" name="option2" class="form-control" required>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Option 3</label>
+            <input type="text" name="option3" class="form-control">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Option 4</label>
+            <input type="text" name="option4" class="form-control">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Bonne réponse</label>
+            <select name="correct_answer" class="form-select" required>
+                <option value="0">Option 1</option>
+                <option value="1">Option 2</option>
+                <option value="2">Option 3</option>
+                <option value="3">Option 4</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Créer le Quiz</button>
+    </form>
+</div>
+{% endblock %}

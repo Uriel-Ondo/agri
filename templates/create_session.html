@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Créer une session{% endblock %}
+{% block content %}
+<h2>Créer une nouvelle session</h2>
+<form method="POST">
+    <div class="mb-3">
+        <label for="title" class="form-label">Titre</label>
+        <input type="text" class="form-control" id="title" name="title" required>
+    </div>
+    <div class="mb-3">
+        <label for="description" class="form-label">Description</label>
+        <textarea class="form-control" id="description" name="description"></textarea>
+    </div>
+    <div class="mb-3">
+        <label for="start_time" class="form-label">Date et heure de début</label>
+        <input type="datetime-local" class="form-control" id="start_time" name="start_time" required>
+    </div>
+    <div class="mb-3">
+        <label for="end_time" class="form-label">Date et heure de fin</label>
+        <input type="datetime-local" class="form-control" id="end_time" name="end_time" required>
+    </div>
+    <button type="submit" class="btn btn-primary">Créer</button>
+</form>
+{% endblock %}

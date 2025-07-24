@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}Gérer la session{% endblock %}
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h3>Gérer la session : {{ session.title }}</h3>
+    </div>
+    <div class="card-body">
+        <p>{{ session.description }}</p>
+        <p><strong>Statut :</strong> {{ session.status }}</p>
+        {% if session.status == 'scheduled' %}
+            <form method="POST">
+                <button type="submit" name="start" class="btn btn-success">Démarrer la session</button>
+            </form>
+        {% elif session.status == 'live' %}
+            <p><strong>URL RTMP :</strong> {{ rtmp_url }}</p>
+            <p>Pour diffuser votre session en direct, suivez ces étapes avec OBS Studio :</p>
+            <ol>
+                <li>Ouvrez OBS Studio.</li>
+                <li>Allez dans "Paramètres" > "Stream".</li>
+                <li>Sélectionnez "Custom" comme service de streaming.</li>
+                <li>Entrez l'URL RTMP suivante : {{ rtmp_url }}</li>
+                <li>Cliquez sur "Appliquer" puis "OK".</li>
+                <li>Cliquez sur "Commencer le streaming".</li>
+            </ol>
+            <p>Si vous rencontrez des problèmes :</p>
+            <ul>
+                <li>Vérifiez que votre serveur SRS est accessible sur le port {{ rtmp_port }}.</li>
+                <li>Assurez-vous que le port {{ rtmp_port }} n'est pas bloqué par un pare-feu.</li>
+                <li>Vérifiez les logs de SRS pour détecter d'éventuelles erreurs.</li>
+            </ul>
+            <form method="POST">
+                <button type="submit" name="stop" class="btn btn-danger">Arrêter la session</button>
+            </form>
+        {% endif %}
+        <a href="{{ url_for('create_quiz', session_id=session.id) }}" class="btn btn-primary mt-3">Créer un quiz</a>
+    </div>
+</div>
+<h3 class="mt-4">Questions des agriculteurs</h3>
+<div id="questions">
+    {% for question in questions %}
+        <div class="card mb-2">
+            <div class="card-body">
+                <p><strong>Question :</strong> {{ question.question_text }} <small>({{ question.timestamp.strftime('%Y-%m-%d %H:%M:%S') }})</small></p>
+                {% if question.answer_text %}
+                    <p><strong>Réponse :</strong> {{ question.answer_text }}</p>
+                {% else %}
+                    <form method="POST">
+                        <input type="hidden" name="question_id" value="{{ question.id }}">
+                        <div class="mb-3">
+                            <label for="answer_text" class="form-label">Réponse</label>
+                            <textarea class="form-control" name="answer_text"></textarea>
+                        </div>
+                        <button type="submit" name="answer" class="btn btn-primary">Répondre</button>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+    {% endfor %}
+</div>
+<h3 class="mt-4">Quizzes</h3>
+<div id="quizzes">
+    {% for quiz in quizzes %}
+        <div class="card mb-2">
+            <div class="card-body">
+                <p><strong>Question :</strong> {{ quiz.question }} <small>({{ quiz.timestamp.strftime('%Y-%m-%d %H:%M:%S') }})</small></p>
+                <ul>
+                    {% for option in quiz.options %}
+                        <li>{{ option }}</li>
+                    {% endfor %}
+                </ul>
+                <p><strong>Bonne réponse :</strong> {{ quiz.options[quiz.correct_answer] }}</p>
+                <div id="quiz-results-{{ quiz.id }}">
+                    <p><strong>Résultats :</strong> Chargement...</p>
+                </div>
+                <a href="{{ url_for('quiz_results', session_id=session.id, quiz_id=quiz.id) }}" class="btn btn-info btn-sm">Voir les résultats</a>
+            </div>
+        </div>
+    {% endfor %}
+</div>
+<script>
+    function fetchQuestions() {
+        fetch('/api/session/{{ session.id }}/questions')
+            .then(response => response.json())
+            .then(data => {
+                let questionsDiv = document.getElementById('questions');
+                questionsDiv.innerHTML = '';
+                data.forEach(([q, a]) => {
+                    let question = q.split(':')[1];
+                    let answer = a.split(':')[1];
+                    let card = `<div class="card mb-2"><div class="card-body"><p><strong>Question :</strong> ${question}</p>`;
+                    if (answer) {
+                        card += `<p><strong>Réponse :</strong> ${answer}</p>`;
+                    }
+                    card += `</div></div>`;
+                    questionsDiv.innerHTML += card;
+                });
+            });
+    }
+
+    function fetchQuizResults(quizId) {
+        fetch(`/api/session/{{ session.id }}/quiz/${quizId}/results`)
+            .then(response => response.json())
+            .then(data => {
+                let resultsDiv = document.getElementById(`quiz-results-${quizId}`);
+                resultsDiv.innerHTML = '<p><strong>Résultats :</strong></p><ul>';
+                data.results.forEach((count, index) => {
+                    resultsDiv.innerHTML += `<li>${data.options[index]} : ${count} réponses</li>`;
+                });
+                resultsDiv.innerHTML += '</ul>';
+            });
+    }
+
+    {% for quiz in quizzes %}
+        setInterval(() => fetchQuizResults({{ quiz.id }}), 5000);
+    {% endfor %}
+    setInterval(fetchQuestions, 5000);
+</script>
+{% endblock %}

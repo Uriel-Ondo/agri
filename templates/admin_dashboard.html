@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Tableau de bord administrateur{% endblock %}
+{% block content %}
+<div class="container">
+    <h2>Tableau de bord administrateur</h2>
+    
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Utilisateurs</h5>
+                    <p class="card-text">Gérer les experts et administrateurs</p>
+                    <a href="{{ url_for('user_management') }}" class="btn btn-primary">Gérer</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Sessions</h5>
+                    <p class="card-text">Voir toutes les sessions en cours</p>
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-primary">Voir</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Statistiques</h5>
+                    <p class="card-text">Analyser l'utilisation de la plateforme</p>
+                    <a href="{{ url_for('stats') }}" class="btn btn-primary">Voir</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

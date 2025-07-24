@@ -1,0 +1,9 @@
+Flask
+Flask-Login
+Flask-SQLAlchemy
+redis
+mysqlclient
+uuid
+python-dotenv
+flask-restx
+Flask-Migrate

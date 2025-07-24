@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Tableau de bord{% endblock %}
+{% block content %}
+<h2>Tableau de bord</h2>
+<a href="{{ url_for('create_session') }}" class="btn btn-success mb-3">Créer une nouvelle session</a>
+<h3>Sessions à venir</h3>
+<table class="table">
+    <thead>
+        <tr>
+            <th>Titre</th>
+            <th>Date de début</th>
+            <th>Statut</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for session in sessions %}
+            <tr>
+                <td>{{ session.title }}</td>
+                <td>{{ session.start_time }}</td>
+                <td>{{ session.status }}</td>
+                <td>
+                    <a href="{{ url_for('manage_session', session_id=session.id) }}" class="btn btn-primary btn-sm">Gérer</a>
+                </td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
