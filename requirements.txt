@@ -7,3 +7,7 @@ uuid
 python-dotenv
 flask-restx
 Flask-Migrate
+flask-socketio
+flask-cors 
+gevent
+gevent-websocket
