@@ -176,7 +176,6 @@ flask run
 
 ## Tests
 
-- Lancer les tests unitaires avec `pytest` (voir dossier `tests/`).
 - Tester la latence et la robustesse des interactions en conditions réelles (multi-utilisateurs).
 
 ---
