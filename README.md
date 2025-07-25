@@ -117,19 +117,61 @@ source database/schema.sql;
 Modifier le fichier de configuration SRS (`/usr/local/srs/conf/srs.conf`) :
 
 ```
+# main config for srs.
+# @see full.conf for detail config.
+
 listen              1935;
-vhost __defaultVhost__ {
+max_connections     1000;
+#srs_log_tank        file;
+#srs_log_file        ./objs/srs.log;
+daemon              on;
+http_api {
     enabled         on;
-    chunk_size      4000;
-    hls {
+    listen          1985;
+}
+http_server {
+    enabled         on;
+    listen          8080;
+    dir             ./objs/nginx/html;
+}
+rtc_server {
+    enabled on;
+    listen 8000; # UDP port
+    # @see https://ossrs.net/lts/zh-cn/docs/v4/doc/webrtc#config-candidate
+    candidate $CANDIDATE;
+}
+vhost __defaultVhost__ {
+	enabled         on;
+	chunk_size      4000;
+	
+	http {
         enabled     on;
-        hls_path    ./objs/nginx/html;
-        hls_fragment 3;
-        hls_window   60;
+        
     }
-    mpegts {
+    hls {
+        enabled         on;
+	hls_path	./objs/nginx/html/live;
+	hls_fragment	1;
+	hls_window	30;
+	hls_cleanup	off;
+	hls_m3u8_file  [stream].m3u8;  
+        hls_ts_file     [stream]-[seq].ts; 
+    }
+    http_remux {
         enabled     on;
-        output      udp://tnt-broadcast:1234;
+        mount       [vhost]/[app]/[stream].flv;
+    }
+    rtc {
+        enabled     on;
+        # @see https://ossrs.net/lts/zh-cn/docs/v4/doc/webrtc#rtmp-to-rtc
+        rtmp_to_rtc off;
+        # @see https://ossrs.net/lts/zh-cn/docs/v4/doc/webrtc#rtc-to-rtmp
+        rtc_to_rtmp on;
+	bframe	    discard;
+    }
+
+    play{
+        gop_cache_max_frames 2500;
     }
 }
 ```
