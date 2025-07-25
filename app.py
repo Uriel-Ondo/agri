@@ -44,7 +44,7 @@ def load_user(user_id):
     return db.session.get(User, int(user_id))
 
 # Création du blueprint et de l'API
-api_bp = Blueprint('api', __name__)
+api_bp = Blueprint('api', __name__,url_prefix='/api')
 api = Api(
     app=api_bp,
     version='1.0',
