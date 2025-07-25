@@ -23,7 +23,7 @@
             width: 100%;
             height: auto;
         }
-        #question-form, #quiz-container {
+        #question-form, #quiz-container, #questions-container {
             margin-top: 20px;
             background-color: #333;
             padding: 20px;
@@ -51,16 +51,33 @@
             margin-top: 20px;
             font-size: 18px;
         }
+        #live-button {
+            margin-top: 10px;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #live-button:hover {
+            background-color: #0056b3;
+        }
     </style>
 </head>
 <body>
     <div id="video-container">
         <video id="video-player" controls></video>
+        <button id="live-button" onclick="seekToLive()">Revenir en direct</button>
     </div>
     <div id="question-form">
         <h2>Posez une question</h2>
         <input type="text" id="question-input" placeholder="Entrez votre question">
         <button onclick="sendQuestion()">Envoyer</button>
+    </div>
+    <div id="questions-container">
+        <h2>Questions et réponses</h2>
+        <div id="questions"></div>
     </div>
     <div id="quiz-container">
         <h2>Quiz</h2>
@@ -73,6 +90,11 @@
     <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
     
     <script>
+        let videoSystem = null;
+        let sessionId = null;
+        let currentQuizId = null;
+        const backendUrl = 'http://localhost:5000';
+
         function initVideoPlayer() {
             const videoPlayer = document.getElementById('video-player');
             if (Hls.isSupported()) {
@@ -81,6 +103,10 @@
                     debug: true,
                     enableWorker: true,
                     lowLatencyMode: true,
+                    maxBufferSize: 600000,
+                    maxBufferLength: 30,
+                    liveSyncDurationCount: 3,
+                    liveMaxLatencyDurationCount: 6,
                     xhrSetup: function(xhr, url) {
                         xhr.withCredentials = false;
                     }
@@ -138,12 +164,18 @@
             }
         }
 
-        document.addEventListener('DOMContentLoaded', function() {
-            const videoSystem = initVideoPlayer();
-            const backendUrl = 'http://localhost:5000';
-            let sessionId;
-            let currentQuizId = null;
+        function seekToLive() {
+            if (videoSystem && videoSystem.hls) {
+                videoSystem.hls.startLoad();
+                videoSystem.player.play().catch(e => {
+                    console.error('Erreur lors du retour en direct:', e);
+                    document.getElementById('response').innerText = 'Erreur lors du retour en direct: ' + e.message;
+                });
+            }
+        }
 
+        document.addEventListener('DOMContentLoaded', function() {
+            videoSystem = initVideoPlayer();
             const socket = io(backendUrl, {
                 path: '/socket.io',
                 transports: ['websocket'],
@@ -153,6 +185,8 @@
 
             socket.on('connect', () => {
                 console.log('WebSocket connected');
+                document.getElementById('response').innerText = 'Connecté au serveur';
+                checkCurrentSession();
             });
 
             socket.on('connect_error', (error) => {
@@ -166,7 +200,28 @@
             });
 
             socket.on('new_question', (data) => {
-                document.getElementById('response').innerText = `Nouvelle question : ${data.question_text}`;
+                const questionsDiv = document.getElementById('questions');
+                const questionHtml = `
+                    <div class="card mb-2">
+                        <div class="card-body">
+                            <p><strong>Question :</strong> ${data.question_text} 
+                               <small>(${new Date(data.timestamp).toLocaleString()})</small></p>
+                            ${data.answer_text ? `<p><strong>Réponse :</strong> ${data.answer_text}</p>` : ''}
+                        </div>
+                    </div>
+                `;
+                questionsDiv.insertAdjacentHTML('beforeend', questionHtml);
+            });
+
+            socket.on('new_answer', (data) => {
+                const questionsDiv = document.getElementById('questions');
+                const questionElements = questionsDiv.querySelectorAll('.card-body');
+                questionElements.forEach(element => {
+                    if (element.textContent.includes(data.question_text)) {
+                        const answerHtml = `<p><strong>Réponse :</strong> ${data.answer_text}</p>`;
+                        element.insertAdjacentHTML('beforeend', answerHtml);
+                    }
+                });
             });
 
             socket.on('new_quiz', (data) => {
@@ -186,30 +241,67 @@
                 currentQuizId = data.id;
             });
 
-            fetch(`${backendUrl}/api/sessions/current`)
-                .then(response => {
-                    if (!response.ok) {
-                        console.error('Erreur API session:', response.status);
-                        document.getElementById('response').innerText = 'Aucune session en direct';
-                        return null;
+            socket.on('session_status_changed', (data) => {
+                if (data.status === 'live') {
+                    fetch(`${backendUrl}/api/sessions/current`)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data && data.id) {
+                                sessionId = data.id;
+                                socket.emit('join_session', { session_id: sessionId });
+                                if (videoSystem) {
+                                    loadHlsVideo(data.hls_url, videoSystem);
+                                }
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Erreur lors de la récupération de la session:', error);
+                            document.getElementById('response').innerText = 'Erreur lors de la récupération de la session';
+                        });
+                } else if (data.status === 'ended') {
+                    document.getElementById('response').innerText = 'La session a été terminée';
+                    if (videoSystem && videoSystem.hls) {
+                        videoSystem.hls.destroy();
                     }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data && data.id) {
-                        sessionId = data.id;
-                        if (videoSystem) {
-                            loadHlsVideo(data.hls_url, videoSystem);
-                        } else {
-                            document.getElementById('response').innerText = 'Votre navigateur ne supporte pas la lecture HLS';
+                }
+            });
+
+            function checkCurrentSession() {
+                fetch(`${backendUrl}/api/sessions/current`)
+                    .then(response => {
+                        if (!response.ok) {
+                            console.error('Erreur API session:', response.status);
+                            document.getElementById('response').innerText = 'Aucune session en direct';
+                            return null;
                         }
-                        fetchQuizzes(data.id);
-                    }
-                })
-                .catch(error => {
-                    console.error('Erreur API:', error);
-                    document.getElementById('response').innerText = 'Erreur de connexion au serveur: ' + error.message;
-                });
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data && data.id) {
+                            if (sessionId !== data.id) {
+                                sessionId = data.id;
+                                socket.emit('join_session', { session_id: sessionId });
+                                if (videoSystem) {
+                                    loadHlsVideo(data.hls_url, videoSystem);
+                                }
+                                fetchQuizzes(data.id);
+                            }
+                        } else {
+                            sessionId = null;
+                            document.getElementById('response').innerText = 'Aucune session en direct';
+                            if (videoSystem && videoSystem.hls) {
+                                videoSystem.hls.destroy();
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Erreur API:', error);
+                        document.getElementById('response').innerText = 'Erreur de connexion au serveur: ' + error.message;
+                    });
+            }
+
+            checkCurrentSession();
+            setInterval(checkCurrentSession, 10000); // Vérifier toutes les 10 secondes
 
             function sendQuestion() {
                 const questionInput = document.getElementById('question-input').value;
@@ -273,6 +365,7 @@
 
             window.sendQuestion = sendQuestion;
             window.sendQuizResponse = sendQuizResponse;
+            window.seekToLive = seekToLive;
         });
     </script>
 </body>

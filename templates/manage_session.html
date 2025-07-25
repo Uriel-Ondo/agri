@@ -40,17 +40,17 @@
 <h3 class="mt-4">Questions des agriculteurs</h3>
 <div id="questions">
     {% for question in questions %}
-        <div class="card mb-2">
+        <div class="card mb-2" data-question-id="{{ question.id }}">
             <div class="card-body">
                 <p><strong>Question :</strong> {{ question.question_text }} <small>({{ question.timestamp.strftime('%Y-%m-%d %H:%M:%S') }})</small></p>
                 {% if question.answer_text %}
                     <p><strong>Réponse :</strong> {{ question.answer_text }}</p>
                 {% else %}
-                    <form method="POST">
+                    <form method="POST" class="answer-form">
                         <input type="hidden" name="question_id" value="{{ question.id }}">
                         <div class="mb-3">
-                            <label for="answer_text" class="form-label">Réponse</label>
-                            <textarea class="form-control" name="answer_text"></textarea>
+                            <label for="answer_text_{{ question.id }}" class="form-label">Réponse</label>
+                            <textarea class="form-control" name="answer_text" id="answer_text_{{ question.id }}"></textarea>
                         </div>
                         <button type="submit" name="answer" class="btn btn-primary">Répondre</button>
                     </form>
@@ -62,7 +62,7 @@
 <h3 class="mt-4">Quizzes</h3>
 <div id="quizzes">
     {% for quiz in quizzes %}
-        <div class="card mb-2">
+        <div class="card mb-2" data-quiz-id="{{ quiz.id }}">
             <div class="card-body">
                 <p><strong>Question :</strong> {{ quiz.question }} <small>({{ quiz.timestamp.strftime('%Y-%m-%d %H:%M:%S') }})</small></p>
                 <ul>
@@ -79,42 +79,119 @@
         </div>
     {% endfor %}
 </div>
+<script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
 <script>
-    function fetchQuestions() {
-        fetch('/api/session/{{ session.id }}/questions')
-            .then(response => response.json())
-            .then(data => {
-                let questionsDiv = document.getElementById('questions');
-                questionsDiv.innerHTML = '';
-                data.forEach(([q, a]) => {
-                    let question = q.split(':')[1];
-                    let answer = a.split(':')[1];
-                    let card = `<div class="card mb-2"><div class="card-body"><p><strong>Question :</strong> ${question}</p>`;
-                    if (answer) {
-                        card += `<p><strong>Réponse :</strong> ${answer}</p>`;
+    document.addEventListener('DOMContentLoaded', function() {
+        const sessionId = {{ session.id }};
+        const socket = io('http://localhost:5000', {
+            path: '/socket.io',
+            transports: ['websocket'],
+            reconnectionAttempts: 5,
+            reconnectionDelay: 1000
+        });
+
+        socket.on('connect', () => {
+            console.log('WebSocket connected');
+            socket.emit('join_session', { session_id: sessionId });
+        });
+
+        socket.on('connect_error', (error) => {
+            console.error('Erreur de connexion WebSocket:', error);
+            alert('Erreur de connexion WebSocket: ' + error.message);
+        });
+
+        socket.on('new_question', function(data) {
+            const questionsDiv = document.getElementById('questions');
+            const questionHtml = `
+                <div class="card mb-2" data-question-id="${data.question_id}">
+                    <div class="card-body">
+                        <p><strong>Question :</strong> ${data.question_text} 
+                           <small>(${new Date(data.timestamp).toLocaleString()})</small></p>
+                        <form method="POST" class="answer-form">
+                            <input type="hidden" name="question_id" value="${data.question_id}">
+                            <div class="mb-3">
+                                <label for="answer_text_${data.question_id}" class="form-label">Réponse</label>
+                                <textarea class="form-control" name="answer_text" id="answer_text_${data.question_id}"></textarea>
+                            </div>
+                            <button type="submit" name="answer" class="btn btn-primary">Répondre</button>
+                        </form>
+                    </div>
+                </div>
+            `;
+            questionsDiv.insertAdjacentHTML('beforeend', questionHtml);
+        });
+
+        socket.on('new_answer', function(data) {
+            const questionElements = document.querySelectorAll('.card[data-question-id="' + data.question_id + '"] .card-body');
+            questionElements.forEach(element => {
+                const form = element.querySelector('form');
+                if (form) {
+                    form.remove();
+                    const answerHtml = `<p><strong>Réponse :</strong> ${data.answer_text}</p>`;
+                    element.insertAdjacentHTML('beforeend', answerHtml);
+                }
+            });
+        });
+
+        socket.on('new_quiz', function(data) {
+            const quizzesDiv = document.getElementById('quizzes');
+            const optionsHtml = data.options.map(opt => `<li>${opt}</li>`).join('');
+            const quizHtml = `
+                <div class="card mb-2" data-quiz-id="${data.id}">
+                    <div class="card-body">
+                        <p><strong>Question :</strong> ${data.question} 
+                           <small>(${new Date(data.timestamp).toLocaleString()})</small></p>
+                        <ul>${optionsHtml}</ul>
+                        <p><strong>Bonne réponse :</strong> ${data.options[data.correct_answer]}</p>
+                        <div id="quiz-results-${data.id}">
+                            <p><strong>Résultats :</strong> Chargement...</p>
+                        </div>
+                        <a href="/session/${sessionId}/quiz/${data.id}/results" 
+                           class="btn btn-info btn-sm">Voir les résultats</a>
+                    </div>
+                </div>
+            `;
+            quizzesDiv.insertAdjacentHTML('afterbegin', quizHtml);
+            fetchQuizResults(data.id);
+        });
+
+        socket.on('new_quiz_response', function(data) {
+            fetchQuizResults(data.quiz_id);
+        });
+
+        socket.on('session_status_changed', function(data) {
+            if (data.status === 'ended') {
+                alert('La session a été terminée par l\'expert');
+                window.location.reload();
+            }
+        });
+
+        function fetchQuizResults(quizId) {
+            fetch(`/api/session/${sessionId}/quiz/${quizId}/results`)
+                .then(response => response.json())
+                .then(data => {
+                    const resultsDiv = document.getElementById(`quiz-results-${quizId}`);
+                    if (resultsDiv) {
+                        let resultsHtml = '<p><strong>Résultats :</strong></p><ul>';
+                        data.results.forEach((count, index) => {
+                            resultsHtml += `<li>${data.options[index]} : ${count} réponses</li>`;
+                        });
+                        resultsHtml += '</ul>';
+                        resultsDiv.innerHTML = resultsHtml;
                     }
-                    card += `</div></div>`;
-                    questionsDiv.innerHTML += card;
+                })
+                .catch(error => {
+                    console.error('Erreur lors de la récupération des résultats:', error);
                 });
-            });
-    }
+        }
 
-    function fetchQuizResults(quizId) {
-        fetch(`/api/session/{{ session.id }}/quiz/${quizId}/results`)
-            .then(response => response.json())
-            .then(data => {
-                let resultsDiv = document.getElementById(`quiz-results-${quizId}`);
-                resultsDiv.innerHTML = '<p><strong>Résultats :</strong></p><ul>';
-                data.results.forEach((count, index) => {
-                    resultsDiv.innerHTML += `<li>${data.options[index]} : ${count} réponses</li>`;
-                });
-                resultsDiv.innerHTML += '</ul>';
+        // Mettre à jour périodiquement les résultats des quizzes
+        setInterval(() => {
+            document.querySelectorAll('[id^="quiz-results-"]').forEach(el => {
+                const quizId = el.id.split('-')[2];
+                fetchQuizResults(quizId);
             });
-    }
-
-    {% for quiz in quizzes %}
-        setInterval(() => fetchQuizResults({{ quiz.id }}), 5000);
-    {% endfor %}
-    setInterval(fetchQuestions, 5000);
+        }, 5000);
+    });
 </script>
 {% endblock %}

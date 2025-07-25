@@ -9,7 +9,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from redis import Redis
 from flask_migrate import Migrate
 from flask_restx import Api, Resource, fields, Namespace
-from flask_socketio import SocketIO, emit
+from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask_cors import CORS
 from config import Config
 from models import db, User, Session, Question, Quiz, QuizResponse
@@ -18,7 +18,13 @@ app = Flask(__name__)
 app.config.from_object(Config)
 
 CORS(app, resources={r"/api/*": {"origins": "*"}, r"/live/*": {"origins": "*"}})
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='gevent')
+socketio = SocketIO(app, 
+                   cors_allowed_origins="*", 
+                   async_mode='gevent',
+                   logger=True,
+                   engineio_logger=True,
+                   ping_timeout=60,
+                   ping_interval=25)
 
 # Initialiser la base de données
 db.init_app(app)
@@ -115,14 +121,21 @@ class QuestionOperations(Resource):
         redis_client.rpush(f"session:{session_id}:questions", f"Q:{question_text}|A:")
         socketio.emit('new_question', {
             'session_id': session_id,
-            'question_text': question_text
-        })
+            'question_id': question.id,
+            'question_text': question_text,
+            'timestamp': question.timestamp.isoformat()
+        }, room=f'session_{session_id}')
         return {'status': 'success', 'question_id': question.id}, 201
 
     @ns_question.doc('get_session_questions')
     def get(self, session_id):
-        questions = redis_client.lrange(f"session:{session_id}:questions", 0, -1)
-        return jsonify([q.decode('utf-8').split('|') for q in questions])
+        questions = Question.query.filter_by(session_id=session_id).order_by(Question.timestamp.asc()).all()
+        return jsonify([{
+            'id': q.id,
+            'question_text': q.question_text,
+            'answer_text': q.answer_text,
+            'timestamp': q.timestamp.isoformat()
+        } for q in questions])
 
 @ns_session.route('/<int:session_id>/quizzes')
 class SessionQuizzes(Resource):
@@ -159,7 +172,7 @@ class QuizResponseAPI(Resource):
             'session_id': session_id,
             'quiz_id': quiz_id,
             'selected_option': selected_option
-        })
+        }, room=f'session_{session_id}')
         return {'status': 'success'}, 201
 
 @ns_session.route('/<int:session_id>/quiz/<int:quiz_id>/results')
@@ -285,10 +298,18 @@ def manage_session(session_id):
         if 'start' in request.form:
             session.status = 'live'
             db.session.commit()
+            socketio.emit('session_status_changed', {
+                'session_id': session_id,
+                'status': 'live'
+            }, room=f'session_{session_id}')
             flash('Session démarrée avec succès !', 'success')
         elif 'stop' in request.form:
             session.status = 'ended'
             db.session.commit()
+            socketio.emit('session_status_changed', {
+                'session_id': session_id,
+                'status': 'ended'
+            }, room=f'session_{session_id}')
             flash('Session arrêtée avec succès !', 'success')
         elif 'answer' in request.form:
             question_id = request.form['question_id']
@@ -299,11 +320,13 @@ def manage_session(session_id):
             redis_client.rpush(f"session:{session_id}:questions", f"Q:{question.question_text}|A:{answer_text}")
             socketio.emit('new_answer', {
                 'session_id': session_id,
+                'question_id': question_id,
                 'question_text': question.question_text,
-                'answer_text': answer_text
-            })
+                'answer_text': answer_text,
+                'timestamp': question.timestamp.isoformat()
+            }, room=f'session_{session_id}')
             flash('Réponse enregistrée avec succès !', 'success')
-    questions = Question.query.filter_by(session_id=session_id).all()
+    questions = Question.query.filter_by(session_id=session_id).order_by(Question.timestamp.asc()).all()
     quizzes = Quiz.query.filter_by(session_id=session_id).order_by(Quiz.timestamp.desc()).all()
     rtmp_url = f"rtmp://{app.config['SRS_SERVER']}:{app.config['SRS_RTMP_PORT']}/live/{session.stream_key}"
     hls_url = f"http://{app.config['SRS_SERVER']}:{app.config['SRS_HTTP_PORT']}/live/{session.stream_key}.m3u8"
@@ -345,8 +368,9 @@ def create_quiz(session_id):
             'session_id': session_id,
             'id': quiz.id,
             'question': question,
-            'options': options
-        })
+            'options': options,
+            'timestamp': quiz.timestamp.isoformat()
+        }, room=f'session_{session_id}')
         flash('Quiz créé avec succès !', 'success')
         return redirect(url_for('manage_session', session_id=session_id))
     return render_template('create_quiz.html', session=session)
@@ -363,6 +387,11 @@ def respond_quiz(session_id, quiz_id):
     )
     db.session.add(response)
     db.session.commit()
+    socketio.emit('new_quiz_response', {
+        'session_id': session_id,
+        'quiz_id': quiz_id,
+        'selected_option': selected_option
+    }, room=f'session_{session_id}')
     return jsonify({'status': 'success'})
 
 @app.route('/session/<int:session_id>/quiz/<int:quiz_id>/results')
@@ -384,7 +413,47 @@ def live_session(stream_key):
 # Gestion des événements WebSocket
 @socketio.on('connect')
 def handle_connect():
-    print('Client connected to WebSocket')
+    print(f'Client connected: {request.sid}')
+
+@socketio.on('join_session')
+def handle_join_session(data):
+    session_id = data.get('session_id')
+    if session_id:
+        join_room(f'session_{session_id}')
+        print(f'Client {request.sid} joined session {session_id}')
+        
+        # Envoyer l'historique des questions
+        questions = Question.query.filter_by(session_id=session_id).order_by(Question.timestamp.asc()).all()
+        for question in questions:
+            emit('new_question', {
+                'session_id': session_id,
+                'question_id': question.id,
+                'question_text': question.question_text,
+                'answer_text': question.answer_text,
+                'timestamp': question.timestamp.isoformat()
+            }, room=request.sid)
+        
+        # Envoyer l'historique des quizzes
+        quizzes = Quiz.query.filter_by(session_id=session_id).order_by(Quiz.timestamp.desc()).all()
+        for quiz in quizzes:
+            emit('new_quiz', {
+                'session_id': session_id,
+                'id': quiz.id,
+                'question': quiz.question,
+                'options': quiz.options,
+                'timestamp': quiz.timestamp.isoformat()
+            }, room=request.sid)
+
+@socketio.on('leave_session')
+def handle_leave_session(data):
+    session_id = data.get('session_id')
+    if session_id:
+        leave_room(f'session_{session_id}')
+        print(f'Client {request.sid} left session {session_id}')
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    print(f'Client disconnected: {request.sid}')
 
 @socketio.on('question')
 def handle_question(data):
@@ -396,8 +465,10 @@ def handle_question(data):
     redis_client.rpush(f"session:{session_id}:questions", f"Q:{question_text}|A:")
     emit('new_question', {
         'session_id': session_id,
-        'question_text': question_text
-    }, broadcast=True)
+        'question_id': question.id,
+        'question_text': question_text,
+        'timestamp': question.timestamp.isoformat()
+    }, room=f'session_{session_id}')
 
 @socketio.on('quiz_response')
 def handle_quiz_response(data):
@@ -417,7 +488,7 @@ def handle_quiz_response(data):
         'session_id': session_id,
         'quiz_id': quiz_id,
         'selected_option': selected_option
-    }, broadcast=True)
+    }, room=f'session_{session_id}')
 
 if __name__ == '__main__':
     with app.app_context():
