@@ -1,31 +1,39 @@
 {% extends "base.html" %}
 {% block title %}Créer un Quiz - {{ session.title }}{% endblock %}
 {% block content %}
-<div class="container">
-    <h1>Créer un Quiz pour {{ session.title }}</h1>
+<div class="quiz-form">
+    <h1><i class="bi bi-patch-question"></i> Créer un Quiz pour {{ session.title }}</h1>
     <form method="POST">
         <div class="mb-3">
             <label class="form-label">Question</label>
-            <textarea name="question" class="form-control" required></textarea>
+            <textarea name="question" class="form-control" rows="3" required></textarea>
         </div>
-        <div class="mb-3">
-            <label class="form-label">Option 1</label>
-            <input type="text" name="option1" class="form-control" required>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label"><i class="bi bi-1-circle"></i> Option 1</label>
+                    <input type="text" name="option1" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label"><i class="bi bi-2-circle"></i> Option 2</label>
+                    <input type="text" name="option2" class="form-control" required>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label"><i class="bi bi-3-circle"></i> Option 3</label>
+                    <input type="text" name="option3" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label"><i class="bi bi-4-circle"></i> Option 4</label>
+                    <input type="text" name="option4" class="form-control">
+                </div>
+            </div>
         </div>
-        <div class="mb-3">
-            <label class="form-label">Option 2</label>
-            <input type="text" name="option2" class="form-control" required>
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Option 3</label>
-            <input type="text" name="option3" class="form-control">
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Option 4</label>
-            <input type="text" name="option4" class="form-control">
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Bonne réponse</label>
+        
+        <div class="mb-4">
+            <label class="form-label"><i class="bi bi-check-circle"></i> Bonne réponse</label>
             <select name="correct_answer" class="form-select" required>
                 <option value="0">Option 1</option>
                 <option value="1">Option 2</option>
@@ -33,7 +41,12 @@
                 <option value="3">Option 4</option>
             </select>
         </div>
-        <button type="submit" class="btn btn-primary">Créer le Quiz</button>
+        
+        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-save"></i> Créer le Quiz
+            </button>
+        </div>
     </form>
 </div>
 {% endblock %}

@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Mon Profil{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="profile-card">
+            <div class="card-header">
+                <h3><i class="bi bi-person-circle"></i> Mon Profil</h3>
+            </div>
+            <div class="card-body">
+                <form method="POST" class="profile-form">
+                    <div class="mb-3 row">
+                        <label class="col-sm-3 col-form-label">Nom d'utilisateur</label>
+                        <div class="col-sm-9">
+                            <div class="form-control-plaintext">{{ current_user.username }}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3 row">
+                        <label for="email" class="col-sm-3 col-form-label">Email</label>
+                        <div class="col-sm-9">
+                            <input type="email" class="form-control" id="email" name="email"
+                                   value="{{ current_user.email }}" required>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3 row">
+                        <label for="current_password" class="col-sm-3 col-form-label">Mot de passe actuel</label>
+                        <div class="col-sm-9">
+                            <input type="password" class="form-control" id="current_password" 
+                                   name="current_password" required>
+                            <div class="form-text">Requis pour toute modification</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4 row">
+                        <label for="new_password" class="col-sm-3 col-form-label">Nouveau mot de passe</label>
+                        <div class="col-sm-9">
+                            <input type="password" class="form-control" id="new_password" name="new_password">
+                            <div class="form-text">Laisser vide pour ne pas changer</div>
+                        </div>
+                    </div>
+                    
+                    <div class="text-end">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save"></i> Mettre à jour
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

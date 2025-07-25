@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Créer un utilisateur{% endblock %}
+
+{% block content %}
+<div class="admin-card">
+    <div class="card-header">
+        <h3><i class="bi bi-person-plus"></i> Créer un nouvel utilisateur</h3>
+    </div>
+    <div class="card-body">
+        <form method="POST" class="admin-form">
+            <div class="mb-3">
+                <label for="username" class="form-label">Nom d'utilisateur</label>
+                <input type="text" class="form-control" id="username" name="username" required>
+            </div>
+            
+            <div class="mb-3">
+                <label for="email" class="form-label">Email</label>
+                <input type="email" class="form-control" id="email" name="email" required>
+            </div>
+            
+            <div class="mb-3">
+                <label for="password" class="form-label">Mot de passe</label>
+                <input type="password" class="form-control" id="password" name="password" required>
+                <div class="form-text">Minimum 8 caractères</div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="role" class="form-label">Rôle</label>
+                <select class="form-select" id="role" name="role">
+                    <option value="expert">Expert</option>
+                    <option value="admin">Administrateur</option>
+                </select>
+            </div>
+            
+            <div class="d-flex justify-content-end">
+                <button type="submit" class="btn btn-primary me-2">
+                    <i class="bi bi-check-circle"></i> Créer
+                </button>
+                <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">
+                    <i class="bi bi-x-circle"></i> Annuler
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

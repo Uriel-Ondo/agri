@@ -1,24 +1,38 @@
 {% extends "base.html" %}
 {% block title %}Créer une session{% endblock %}
 {% block content %}
-<h2>Créer une nouvelle session</h2>
-<form method="POST">
-    <div class="mb-3">
-        <label for="title" class="form-label">Titre</label>
-        <input type="text" class="form-control" id="title" name="title" required>
-    </div>
-    <div class="mb-3">
-        <label for="description" class="form-label">Description</label>
-        <textarea class="form-control" id="description" name="description"></textarea>
-    </div>
-    <div class="mb-3">
-        <label for="start_time" class="form-label">Date et heure de début</label>
-        <input type="datetime-local" class="form-control" id="start_time" name="start_time" required>
-    </div>
-    <div class="mb-3">
-        <label for="end_time" class="form-label">Date et heure de fin</label>
-        <input type="datetime-local" class="form-control" id="end_time" name="end_time" required>
-    </div>
-    <button type="submit" class="btn btn-primary">Créer</button>
-</form>
+<div class="session-form">
+    <h2><i class="bi bi-plus-circle"></i> Créer une nouvelle session</h2>
+    <form method="POST">
+        <div class="mb-3">
+            <label for="title" class="form-label">Titre</label>
+            <input type="text" class="form-control" id="title" name="title" required>
+        </div>
+        <div class="mb-3">
+            <label for="description" class="form-label">Description</label>
+            <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="start_time" class="form-label"><i class="bi bi-clock"></i> Date et heure de début</label>
+                    <input type="datetime-local" class="form-control" id="start_time" name="start_time" required>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="end_time" class="form-label"><i class="bi bi-clock"></i> Date et heure de fin</label>
+                    <input type="datetime-local" class="form-control" id="end_time" name="end_time" required>
+                </div>
+            </div>
+        </div>
+        
+        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check-circle"></i> Créer
+            </button>
+        </div>
+    </form>
+</div>
 {% endblock %}

@@ -1,29 +1,46 @@
 {% extends "base.html" %}
 {% block title %}Tableau de bord{% endblock %}
 {% block content %}
-<h2>Tableau de bord</h2>
-<a href="{{ url_for('create_session') }}" class="btn btn-success mb-3">Créer une nouvelle session</a>
-<h3>Sessions à venir</h3>
-<table class="table">
-    <thead>
-        <tr>
-            <th>Titre</th>
-            <th>Date de début</th>
-            <th>Statut</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for session in sessions %}
-            <tr>
-                <td>{{ session.title }}</td>
-                <td>{{ session.start_time }}</td>
-                <td>{{ session.status }}</td>
-                <td>
-                    <a href="{{ url_for('manage_session', session_id=session.id) }}" class="btn btn-primary btn-sm">Gérer</a>
-                </td>
-            </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<div class="dashboard-section">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-speedometer2"></i> Tableau de bord</h2>
+        <a href="{{ url_for('create_session') }}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Créer une nouvelle session
+        </a>
+    </div>
+    
+    <div class="dashboard-card">
+        <h3><i class="bi bi-calendar-event"></i> Sessions à venir</h3>
+        <div class="table-responsive">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Titre</th>
+                        <th>Date de début</th>
+                        <th>Statut</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for session in sessions %}
+                        <tr>
+                            <td>{{ session.title }}</td>
+                            <td>{{ session.start_time.strftime('%d/%m/%Y %H:%M') }}</td>
+                            <td>
+                                <span class="badge bg-{% if session.status == 'planned' %}info{% elif session.status == 'active' %}success{% else %}secondary{% endif %}">
+                                    {{ session.status }}
+                                </span>
+                            </td>
+                            <td>
+                                <a href="{{ url_for('manage_session', session_id=session.id) }}" class="btn btn-sm btn-primary">
+                                    <i class="bi bi-gear"></i> Gérer
+                                </a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
 {% endblock %}

@@ -44,14 +44,19 @@ def load_user(user_id):
     return db.session.get(User, int(user_id))
 
 # Création du blueprint et de l'API
-api_bp = Blueprint('api', __name__, url_prefix='/api')
-api = Api(api_bp, 
-          version='1.0', 
-          title='AgriAssist API', 
-          description='API documentation for AgriAssist streaming platform', 
-          doc='/apidocs/',
-          default='AgriAssist', 
-          default_label='API endpoints')
+api_bp = Blueprint('api', __name__)
+api = Api(
+    app=api_bp,
+    version='1.0',
+    title='AgriAssist API',
+    description='API documentation for AgriAssist streaming platform',
+    doc='/apidocs/',  # Ceci définit le chemin de la documentation
+    default='AgriAssist',
+    default_label='API endpoints'
+)
+
+# Enregistrer le blueprint API après avoir défini toutes les routes
+app.register_blueprint(api_bp)
 
 # Définition des modèles
 session_model = api.model('Session', {
@@ -192,8 +197,6 @@ class QuizResults(Resource):
             'results': results
         })
 
-# Enregistrer le blueprint API après avoir défini toutes les routes
-app.register_blueprint(api_bp)
 
 # Routes Flask standard
 @app.route('/hbbtv')
@@ -202,7 +205,7 @@ def hbbtv():
 
 @app.route('/favicon.ico')
 def favicon():
-    return send_from_directory(os.path.join(app.root_path, 'static'),
+    return send_from_directory(os.path.join(app.root_path, 'static/images'),
                                'favicon.ico', mimetype='image/vnd.microsoft.icon')
 
 @app.route('/', methods=['GET'])
@@ -224,7 +227,8 @@ def login():
         if user and check_password_hash(user.password_hash, password):
             login_user(user)
             flash('Connexion réussie !', 'success')
-            return redirect(url_for('dashboard'))
+            next_page = url_for('admin_dashboard') if user.role == 'admin' else url_for('dashboard')
+            return redirect(next_page)
         else:
             flash('Email ou mot de passe incorrect', 'danger')
     return render_template('login.html')
@@ -259,6 +263,30 @@ def register():
         return redirect(url_for('login'))
     return render_template('register.html')
 
+@app.route('/profile', methods=['GET', 'POST'])
+@login_required
+def profile():
+    if request.method == 'POST':
+        current_user.email = request.form['email']
+        current_password = request.form['current_password']
+        
+        if not check_password_hash(current_user.password_hash, current_password):
+            flash('Mot de passe actuel incorrect', 'danger')
+            return redirect(url_for('profile'))
+        
+        if request.form['new_password']:
+            if request.form['new_password'] != request.form['confirm_password']:
+                flash('Les nouveaux mots de passe ne correspondent pas', 'danger')
+                return redirect(url_for('profile'))
+            
+            current_user.password_hash = generate_password_hash(request.form['new_password'])
+        
+        db.session.commit()
+        flash('Profil mis à jour avec succès', 'success')
+        return redirect(url_for('profile'))
+    
+    return render_template('profile.html')
+
 @app.route('/logout')
 @login_required
 def logout():
@@ -269,8 +297,93 @@ def logout():
 @app.route('/dashboard')
 @login_required
 def dashboard():
+    if current_user.role == 'admin':
+        return redirect(url_for('admin_dashboard'))
+    
     sessions = Session.query.filter_by(user_id=current_user.id).all()
     return render_template('dashboard.html', sessions=sessions)
+
+@app.route('/admin/dashboard')
+@login_required
+def admin_dashboard():
+    if current_user.role != 'admin':
+        flash('Accès non autorisé', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    users = User.query.all()
+    sessions = Session.query.all()
+    return render_template('admin_dashboard.html', users=users, sessions=sessions)
+
+@app.route('/admin/user/create', methods=['GET', 'POST'])
+@login_required
+def admin_create_user():
+    if current_user.role != 'admin':
+        flash('Accès non autorisé', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    if request.method == 'POST':
+        username = request.form['username']
+        email = request.form['email']
+        password = request.form['password']
+        role = request.form['role']
+        
+        existing_user = User.query.filter((User.username == username) | (User.email == email)).first()
+        if existing_user:
+            flash('Nom d\'utilisateur ou email déjà utilisé', 'danger')
+            return redirect(url_for('admin_create_user'))
+        
+        new_user = User(
+            username=username,
+            email=email,
+            password_hash=generate_password_hash(password),
+            role=role
+        )
+        db.session.add(new_user)
+        db.session.commit()
+        flash('Utilisateur créé avec succès', 'success')
+        return redirect(url_for('admin_dashboard'))
+    
+    return render_template('admin_create_user.html')
+
+@app.route('/admin/user/<int:user_id>/edit', methods=['GET', 'POST'])
+@login_required
+def admin_edit_user(user_id):
+    if current_user.role != 'admin':
+        flash('Accès non autorisé', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    user = User.query.get_or_404(user_id)
+    
+    if request.method == 'POST':
+        user.username = request.form['username']
+        user.email = request.form['email']
+        user.role = request.form['role']
+        
+        if request.form['password']:
+            user.password_hash = generate_password_hash(request.form['password'])
+        
+        db.session.commit()
+        flash('Utilisateur mis à jour avec succès', 'success')
+        return redirect(url_for('admin_dashboard'))
+    
+    return render_template('admin_edit_user.html', user=user)
+
+@app.route('/admin/user/<int:user_id>/delete', methods=['POST'])
+@login_required
+def admin_delete_user(user_id):
+    if current_user.role != 'admin':
+        flash('Accès non autorisé', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    user = User.query.get_or_404(user_id)
+    if user.id == current_user.id:
+        flash('Vous ne pouvez pas supprimer votre propre compte', 'danger')
+        return redirect(url_for('admin_dashboard'))
+    
+    db.session.delete(user)
+    db.session.commit()
+    flash('Utilisateur supprimé avec succès', 'success')
+    return redirect(url_for('admin_dashboard'))
 
 @app.route('/create_session', methods=['GET', 'POST'])
 @login_required
@@ -294,6 +407,12 @@ def create_session():
 @login_required
 def manage_session(session_id):
     session = Session.query.get_or_404(session_id)
+    
+    # Vérifier que l'utilisateur est l'expert propriétaire ou admin
+    if current_user.id != session.user_id and current_user.role != 'admin':
+        flash('Action non autorisée', 'danger')
+        return redirect(url_for('dashboard'))
+    
     if request.method == 'POST':
         if 'start' in request.form:
             session.status = 'live'
@@ -326,17 +445,45 @@ def manage_session(session_id):
                 'timestamp': question.timestamp.isoformat()
             }, room=f'session_{session_id}')
             flash('Réponse enregistrée avec succès !', 'success')
+        elif 'delete_session' in request.form:
+            db.session.delete(session)
+            db.session.commit()
+            flash('Session supprimée avec succès', 'success')
+            return redirect(url_for('dashboard'))
+    
     questions = Question.query.filter_by(session_id=session_id).order_by(Question.timestamp.asc()).all()
     quizzes = Quiz.query.filter_by(session_id=session_id).order_by(Quiz.timestamp.desc()).all()
     rtmp_url = f"rtmp://{app.config['SRS_SERVER']}:{app.config['SRS_RTMP_PORT']}/live/{session.stream_key}"
     hls_url = f"http://{app.config['SRS_SERVER']}:{app.config['SRS_HTTP_PORT']}/live/{session.stream_key}.m3u8"
     rtmp_port = app.config['SRS_RTMP_PORT']
-    return render_template('manage_session.html', session=session, questions=questions, rtmp_url=rtmp_url, hls_url=hls_url, rtmp_port=rtmp_port, quizzes=quizzes)
+    return render_template('manage_session.html', session=session, questions=questions, 
+                         rtmp_url=rtmp_url, hls_url=hls_url, rtmp_port=rtmp_port, quizzes=quizzes)
+
+@app.route('/session/<int:session_id>/delete', methods=['POST'])
+@login_required
+def delete_session(session_id):
+    session = Session.query.get_or_404(session_id)
+    
+    # Vérifier que l'utilisateur est admin ou l'expert propriétaire
+    if current_user.role != 'admin' and current_user.id != session.user_id:
+        flash('Action non autorisée', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    db.session.delete(session)
+    db.session.commit()
+    flash('Session supprimée avec succès', 'success')
+    return redirect(url_for('admin_dashboard' if current_user.role == 'admin' else 'dashboard'))
 
 @app.route('/session/<int:session_id>/create_quiz', methods=['GET', 'POST'])
 @login_required
 def create_quiz(session_id):
     session = Session.query.get_or_404(session_id)
+    
+    # Vérifier que l'utilisateur est l'expert propriétaire ou admin
+    if current_user.id != session.user_id and current_user.role != 'admin':
+        flash('Action non autorisée', 'danger')
+        return redirect(url_for('dashboard'))
+    
     if request.method == 'POST':
         question = request.form['question']
         options = [
@@ -374,6 +521,37 @@ def create_quiz(session_id):
         flash('Quiz créé avec succès !', 'success')
         return redirect(url_for('manage_session', session_id=session_id))
     return render_template('create_quiz.html', session=session)
+
+@app.route('/session/<int:session_id>/quiz/<int:quiz_id>/delete', methods=['POST'])
+@login_required
+def delete_quiz(session_id, quiz_id):
+    quiz = Quiz.query.get_or_404(quiz_id)
+    session = Session.query.get_or_404(session_id)
+    
+    # Vérifier que l'utilisateur est l'expert propriétaire ou admin
+    if current_user.id != session.user_id and current_user.role != 'admin':
+        flash('Action non autorisée', 'danger')
+        return redirect(url_for('manage_session', session_id=session_id))
+    
+    try:
+        # Supprimer d'abord toutes les réponses associées à ce quiz
+        QuizResponse.query.filter_by(quiz_id=quiz_id).delete()
+        
+        # Ensuite supprimer le quiz
+        db.session.delete(quiz)
+        db.session.commit()
+        
+        flash('Quiz supprimé avec succès', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Erreur lors de la suppression du quiz: {str(e)}', 'danger')
+    
+    return redirect(url_for('manage_session', session_id=session_id))
+    
+    db.session.delete(quiz)
+    db.session.commit()
+    flash('Quiz supprimé avec succès', 'success')
+    return redirect(url_for('manage_session', session_id=session_id))
 
 @app.route('/session/<int:session_id>/quiz/<int:quiz_id>/respond', methods=['POST'])
 @login_required
@@ -493,6 +671,26 @@ def handle_quiz_response(data):
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
+        
+        # Créer l'admin par défaut s'il n'existe pas
+        admin_name = os.getenv('ADMIN_NAME')
+        admin_email = os.getenv('ADMIN_EMAIL')
+        admin_password = os.getenv('ADMIN_PASSWORD')
+        
+        if admin_name and admin_email and admin_password:
+            admin_user = User.query.filter_by(email=admin_email).first()
+            if not admin_user:
+                hashed_password = generate_password_hash(admin_password)
+                admin_user = User(
+                    username=admin_name,
+                    email=admin_email,
+                    password_hash=hashed_password,
+                    role='admin'
+                )
+                db.session.add(admin_user)
+                db.session.commit()
+                print(f"Admin user {admin_name} created")
+        
         try:
             redis_client.ping()
             print("Redis connection successful")

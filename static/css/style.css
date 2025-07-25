@@ -1,0 +1,428 @@
+/* static/css/style.css */
+:root {
+    --primary-color: #4a8f29;
+    --secondary-color: #f5a623;
+    --light-green: #e8f5e9;
+    --dark-green: #2e7d32;
+    --earth-brown: #8d6e63;
+    --sky-blue: #87CEEB;
+}
+
+body {
+    font-family: 'Poppins', sans-serif;
+    background-color: #f9f9f7;
+    color: #333;
+    background-image: url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80');
+    background-size: cover;
+    background-attachment: fixed;
+    background-position: center;
+    background-blend-mode: overlay;
+    background-color: rgba(255, 255, 255, 0.9);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.navbar {
+    background: linear-gradient(135deg, var(--primary-color), var(--dark-green));
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    font-weight: 500;
+    padding: 0.8rem 1rem;
+}
+
+.navbar-brand {
+    font-family: 'Playfair Display', serif;
+    font-weight: 600;
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+}
+
+.navbar-brand i {
+    margin-right: 10px;
+    font-size: 1.8rem;
+    color: var(--secondary-color);
+}
+
+.nav-link {
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    margin: 0 2px;
+    transition: all 0.3s ease;
+}
+
+.nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+.container {
+    flex: 1;
+    background-color: rgba(255, 255, 255, 0.95);
+    border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+    padding: 2rem;
+    margin-top: 2rem;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    padding: 0.5rem 1.5rem;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+}
+
+.btn-primary:hover {
+    background-color: var(--dark-green);
+    border-color: var(--dark-green);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.alert {
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.dropdown-menu {
+    border-radius: 8px;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+    border: none;
+}
+
+.dropdown-item {
+    padding: 0.5rem 1.5rem;
+}
+
+.dropdown-item:hover {
+    background-color: var(--light-green);
+    color: var(--primary-color);
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Playfair Display', serif;
+    color: var(--dark-green);
+    font-weight: 600;
+}
+
+.card {
+    border-radius: 12px;
+    overflow: hidden;
+    border: none;
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    margin-bottom: 1.5rem;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 20px rgba(241, 243, 241, 0.12);
+}
+
+.card-header {
+    background: linear-gradient(135deg, var(--primary-color), var(--dark-green));
+    color: white;
+    font-weight: 500;
+    padding: 1rem 1.5rem;
+}
+
+.table {
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.table thead th {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+}
+
+.form-control {
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    border: 1px solid #ddd;
+}
+
+.form-control:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.25rem rgba(74, 143, 41, 0.25);
+}
+
+/* Animation pour les icônes */
+.bi-tree-fill {
+    animation: sway 3s ease-in-out infinite;
+    transform-origin: 50% 100%;
+}
+
+@keyframes sway {
+    0%, 100% { transform: rotate(-2deg); }
+    50% { transform: rotate(2deg); }
+}
+
+/* Style pour les alertes avec icônes */
+.alert i.bi {
+    margin-right: 0.5rem;
+}
+/* Styles spécifiques à l'administration */
+.admin-card {
+    border-radius: 12px;
+    overflow: hidden;
+    border: none;
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.08);
+    margin-bottom: 2rem;
+}
+
+.admin-card .card-header {
+    background: linear-gradient(135deg, var(--primary-color), var(--dark-green));
+    color: white;
+    font-weight: 500;
+    padding: 1rem 1.5rem;
+    border-bottom: none;
+}
+
+.admin-card .card-body {
+    padding: 1.5rem;
+}
+
+.admin-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.admin-table th {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 0.75rem;
+    text-align: left;
+}
+
+.admin-table td {
+    padding: 0.75rem;
+    border-bottom: 1px solid #eee;
+    vertical-align: middle;
+}
+
+.admin-table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+.admin-table tr:hover {
+    background-color: var(--light-green);
+}
+
+.btn-action {
+    padding: 0.375rem 0.75rem;
+    margin: 0 0.2rem;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+}
+
+.btn-action:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.admin-form .form-label {
+    font-weight: 500;
+    color: var(--dark-green);
+    margin-bottom: 0.5rem;
+}
+
+.admin-form .form-control,
+.admin-form .form-select {
+    border-radius: 8px;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    margin-bottom: 1rem;
+}
+
+.admin-form .form-control:focus,
+.admin-form .form-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.25rem rgba(74, 143, 41, 0.25);
+}
+
+.admin-section {
+    margin-bottom: 3rem;
+}
+
+.admin-section h3 {
+    border-bottom: 2px solid var(--primary-color);
+    padding-bottom: 0.5rem;
+    margin-bottom: 1.5rem;
+    color: var(--dark-green);
+}
+
+/* Styles pour les formulaires de session et quiz */
+.session-form, .quiz-form {
+    background-color: white;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.08);
+    margin-bottom: 2rem;
+}
+
+.session-form h2, .quiz-form h1 {
+    color: var(--dark-green);
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--primary-color);
+}
+
+.form-label {
+    font-weight: 500;
+    color: var(--dark-green);
+}
+
+.form-control, .form-select {
+    margin-bottom: 1.25rem;
+}
+
+/* Styles pour le tableau de bord */
+.dashboard-section {
+    margin-bottom: 3rem;
+}
+
+.dashboard-card {
+    background-color: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.08);
+    margin-bottom: 2rem;
+}
+
+/* Styles pour la page de login */
+.login-container {
+    max-width: 500px;
+    margin: 0 auto;
+    background-color: white;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.08);
+}
+
+.login-container h2 {
+    color: var(--dark-green);
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+/* Styles pour la gestion de session */
+.session-management {
+    margin-bottom: 2rem;
+}
+
+.session-info-card {
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 2rem;
+}
+
+.session-info-card .card-header {
+    background: linear-gradient(135deg, var(--primary-color), var(--dark-green));
+    color: white;
+}
+
+.session-details {
+    padding: 1.5rem;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.streaming-guide {
+    background-color: #f8f9fa;
+    border-left: 4px solid var(--primary-color);
+    padding: 1rem;
+    margin: 1.5rem 0;
+    border-radius: 0 8px 8px 0;
+}
+
+.questions-section, .quizzes-section {
+    margin-top: 2rem;
+}
+
+.question-card, .quiz-card {
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    border: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.quiz-options {
+    list-style-type: none;
+    padding-left: 0;
+}
+
+.quiz-options li {
+    padding: 0.25rem 0;
+}
+
+.correct-answer {
+    color: var(--primary-color);
+    font-weight: 500;
+}
+
+/* Styles pour les résultats de quiz */
+.quiz-results-container {
+    background-color: white;
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.08);
+}
+
+.result-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.5rem;
+    background-color: #f8f9fa;
+    border-radius: 6px;
+}
+
+.result-item .option-text {
+    flex-grow: 1;
+}
+
+.result-item .vote-count {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+}
+
+/* Styles pour le profil */
+.profile-card {
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.08);
+}
+
+.profile-card .card-header {
+    background: linear-gradient(135deg, var(--primary-color), var(--dark-green));
+    color: white;
+}
+
+.profile-form .form-label {
+    font-weight: 500;
+}
+
+/* Styles pour l'inscription */
+.registration-card {
+    max-width: 600px;
+    margin: 0 auto;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.08);
+}
+
+.registration-card .card-body {
+    padding: 2rem;
+}

@@ -10,7 +10,8 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
-    role = db.Column(db.String(20), nullable=False)
+    role = db.Column(db.String(20), nullable=False, default='expert')
+    sessions = db.relationship('Session', backref='user', lazy=True)
 
 class Session(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -21,7 +22,9 @@ class Session(db.Model):
     status = db.Column(db.String(20), nullable=False)
     stream_key = db.Column(db.String(50), unique=True, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-
+    questions = db.relationship('Question', backref='session', lazy=True)
+    quizzes = db.relationship('Quiz', backref='session', lazy=True)
+    
 class Question(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     session_id = db.Column(db.Integer, db.ForeignKey('session.id'), nullable=False)
