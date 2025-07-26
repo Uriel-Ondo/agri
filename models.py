@@ -1,9 +1,7 @@
-from flask_sqlalchemy import SQLAlchemy
+from extensions import db
 from flask_login import UserMixin
 from datetime import datetime
 import uuid
-
-db = SQLAlchemy()
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)

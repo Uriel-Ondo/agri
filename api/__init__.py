@@ -1,0 +1,1 @@
+from .namespaces import load_namespaces

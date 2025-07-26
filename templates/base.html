@@ -14,7 +14,7 @@
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container-fluid">
-            <a class="navbar-brand" href="{{ url_for('index') }}">
+            <a class="navbar-brand" href="{{ url_for('main.index') }}">
                 <i class="bi bi-tree-fill"></i> Agri-Assist
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -24,12 +24,12 @@
                 <ul class="navbar-nav me-auto">
                     {% if current_user.is_authenticated %}
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('dashboard') }}">
+                            <a class="nav-link" href="{{ url_for('main.dashboard') }}">
                                 <i class="bi bi-speedometer2"></i> Tableau de bord
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('create_session') }}">
+                            <a class="nav-link" href="{{ url_for('sessions.create_session') }}">
                                 <i class="bi bi-plus-circle"></i> Créer une session
                             </a>
                         </li>
@@ -39,7 +39,7 @@
                     {% if current_user.is_authenticated %}
                         {% if current_user.role == 'admin' %}
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('admin_dashboard') }}">
+                            <a class="nav-link" href="{{ url_for('admin.admin_dashboard') }}">
                                 <i class="bi bi-shield-lock"></i> Administration
                             </a>
                         </li>
@@ -49,10 +49,10 @@
                                 <i class="bi bi-person-circle"></i> {{ current_user.username }}
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end">
-                                <li><a class="dropdown-item" href="{{ url_for('profile') }}"><i class="bi bi-person"></i> Profil</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('auth.profile') }}"><i class="bi bi-person"></i> Profil</a></li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li>
-                                    <a class="dropdown-item text-danger" href="{{ url_for('logout') }}">
+                                    <a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}">
                                         <i class="bi bi-box-arrow-right"></i> Déconnexion
                                     </a>
                                 </li>
@@ -60,15 +60,18 @@
                         </li>
                     {% else %}
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('login') }}">
+                            <a class="nav-link" href="{{ url_for('auth.login') }}">
                                 <i class="bi bi-box-arrow-in-right"></i> Connexion
                             </a>
                         </li>
+
+                    <!--
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('register') }}">
+                            <a class="nav-link" href="{{ url_for('auth.register') }}">
                                 <i class="bi bi-person-plus"></i> Inscription
                             </a>
                         </li>
+                        -->
                     {% endif %}
                 </ul>
             </div>

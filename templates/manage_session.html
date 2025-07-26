@@ -52,7 +52,7 @@
                     </form>
                 {% endif %}
                 
-                <a href="{{ url_for('create_quiz', session_id=session.id) }}" class="btn btn-primary">
+                <a href="{{ url_for('quizzes.create_quiz', session_id=session.id) }}" class="btn btn-primary">
                     <i class="bi bi-plus-circle"></i> Créer un quiz
                 </a>
             </div>
@@ -117,7 +117,7 @@
                             </div>
                             
                             {% if current_user.id == session.user_id or current_user.role == 'admin' %}
-                            <form method="POST" action="{{ url_for('delete_quiz', session_id=session.id, quiz_id=quiz.id) }}">
+                            <form method="POST" action="{{ url_for('quizzes.delete_quiz', session_id=session.id, quiz_id=quiz.id) }}">
                                 <button type="submit" class="btn btn-sm btn-danger" 
                                         onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce quiz ?')">
                                     <i class="bi bi-trash"></i>
@@ -134,7 +134,7 @@
                         </div>
                         
                         <div class="mt-2">
-                            <a href="{{ url_for('quiz_results', session_id=session.id, quiz_id=quiz.id) }}" 
+                            <a href="{{ url_for('quizzes.quiz_results', session_id=session.id, quiz_id=quiz.id) }}" 
                                class="btn btn-sm btn-info">
                                 <i class="bi bi-bar-chart"></i> Résultats détaillés
                             </a>
