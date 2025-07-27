@@ -46,16 +46,91 @@
     <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
     
     <script>
-        // [Le reste de votre code JavaScript reste exactement le même]
         let videoSystem = null;
         let sessionId = null;
         let currentQuizId = null;
         const backendUrl = 'http://localhost:5000';
 
+        // Gestion des identifiants uniques et historique des réponses
+        function getDeviceId() {
+            let deviceId = localStorage.getItem('deviceId');
+            if (!deviceId) {
+                deviceId = 'device_' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('deviceId', deviceId);
+            }
+            return deviceId;
+        }
+
+        function checkQuizHistory(quizId) {
+            const quizHistory = JSON.parse(localStorage.getItem('quizHistory') || '{}');
+            return quizHistory[quizId] || false;
+        }
+
+        function disableQuizOptions() {
+            const options = document.querySelectorAll('#quiz-options li');
+            options.forEach(option => {
+                option.style.pointerEvents = 'none';
+                option.style.opacity = '0.6';
+                option.style.cursor = 'not-allowed';
+            });
+        }
+
+        function enableQuizOptions() {
+            const options = document.querySelectorAll('#quiz-options li');
+            options.forEach(option => {
+                option.style.pointerEvents = 'auto';
+                option.style.opacity = '1';
+                option.style.cursor = 'pointer';
+            });
+        }
+
+        function sendQuizResponse(quizId, selectedOption) {
+            const deviceId = getDeviceId();
+            
+            // Vérification locale immédiate
+            if (checkQuizHistory(quizId)) {
+                document.getElementById('response').innerText = 'Vous avez déjà répondu à ce quiz';
+                return;
+            }
+
+            // Désactiver les options pendant l'envoi
+            disableQuizOptions();
+            document.getElementById('response').innerText = 'Envoi en cours...';
+
+            fetch(`${backendUrl}/session/${sessionId}/quiz/${quizId}/respond`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    device_id: deviceId,  // Envoi du device_id
+                    selected_option: selectedOption
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Mettre à jour l'historique local
+                    const quizHistory = JSON.parse(localStorage.getItem('quizHistory') || '{}');
+                    quizHistory[quizId] = true;
+                    localStorage.setItem('quizHistory', JSON.stringify(quizHistory));
+                    
+                    document.getElementById('response').innerText = 'Merci pour votre réponse !';
+                    disableQuizOptions();
+                } else {
+                    document.getElementById('response').innerText = 'Erreur: ' + (data.message || 'Réponse non enregistrée');
+                    enableQuizOptions();
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                document.getElementById('response').innerText = 'Erreur de connexion au serveur';
+                enableQuizOptions();
+            });
+        }
         function initVideoPlayer() {
             const videoPlayer = document.getElementById('video-player');
             if (Hls.isSupported()) {
-                console.log('Utilisation de hls.js version:', Hls.version);
                 const hls = new Hls({
                     debug: true,
                     enableWorker: true,
@@ -70,7 +145,6 @@
                 });
                 return { player: videoPlayer, hls: hls };
             } else if (videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
-                console.log('Support HLS natif détecté');
                 return videoPlayer;
             } else {
                 console.error('Aucun support HLS détecté');
@@ -80,39 +154,31 @@
         }
 
         function loadHlsVideo(hlsUrl, videoSystem) {
-            console.log('Chargement du flux HLS:', hlsUrl);
             if (videoSystem instanceof HTMLVideoElement) {
                 videoSystem.src = hlsUrl;
                 videoSystem.load();
                 videoSystem.play().catch(e => {
                     console.error('Erreur de lecture native:', e);
-                    document.getElementById('response').innerText = 'Erreur de lecture du flux HLS: ' + e.message;
                 });
             } else if (videoSystem && videoSystem.hls) {
                 videoSystem.hls.loadSource(hlsUrl);
                 videoSystem.hls.attachMedia(videoSystem.player);
                 videoSystem.hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                    console.log('Manifeste HLS chargé');
                     videoSystem.player.play().catch(e => {
                         console.error('Erreur de lecture hls.js:', e);
-                        document.getElementById('response').innerText = 'Erreur de lecture du flux HLS: ' + e.message;
                     });
                 });
                 videoSystem.hls.on(Hls.Events.ERROR, (event, data) => {
                     console.error('Erreur hls.js:', data);
-                    document.getElementById('response').innerText = `Erreur HLS: ${data.type} - ${data.details}`;
                     if (data.fatal) {
                         switch (data.type) {
                             case Hls.ErrorTypes.NETWORK_ERROR:
-                                console.error('Erreur réseau fatale, tentative de récupération...');
                                 videoSystem.hls.startLoad();
                                 break;
                             case Hls.ErrorTypes.MEDIA_ERROR:
-                                console.error('Erreur média fatale, tentative de récupération...');
                                 videoSystem.hls.recoverMediaError();
                                 break;
                             default:
-                                console.error('Erreur irrécupérable, destruction de hls.js');
                                 videoSystem.hls.destroy();
                                 break;
                         }
@@ -126,7 +192,6 @@
                 videoSystem.hls.startLoad();
                 videoSystem.player.play().catch(e => {
                     console.error('Erreur lors du retour en direct:', e);
-                    document.getElementById('response').innerText = 'Erreur lors du retour en direct: ' + e.message;
                 });
             }
         }
@@ -142,18 +207,11 @@
 
             socket.on('connect', () => {
                 console.log('WebSocket connected');
-                document.getElementById('response').innerText = 'Connecté au serveur';
                 checkCurrentSession();
             });
 
             socket.on('connect_error', (error) => {
                 console.error('Erreur de connexion WebSocket:', error);
-                document.getElementById('response').innerText = 'Erreur de connexion WebSocket: ' + error.message;
-            });
-
-            socket.on('disconnect', () => {
-                console.log('WebSocket disconnected');
-                document.getElementById('response').innerText = 'WebSocket déconnecté';
             });
 
             socket.on('new_question', (data) => {
@@ -182,39 +240,42 @@
             });
 
             socket.on('new_quiz', (data) => {
+                const alreadyAnswered = checkQuizHistory(data.id);
+                currentQuizId = data.id;
+                
                 document.getElementById('quiz-question').innerText = data.question;
                 const optionsList = document.getElementById('quiz-options');
                 optionsList.innerHTML = '';
+                
                 data.options.forEach((option, index) => {
                     const li = document.createElement('li');
                     li.innerText = option;
                     li.tabIndex = 0;
-                    li.onclick = () => sendQuizResponse(data.id, index);
-                    li.onkeypress = (e) => {
-                        if (e.key === 'Enter') sendQuizResponse(data.id, index);
-                    };
+                    
+                    if (!alreadyAnswered) {
+                        li.onclick = () => sendQuizResponse(data.id, index);
+                        li.onkeypress = (e) => {
+                            if (e.key === 'Enter') sendQuizResponse(data.id, index);
+                        };
+                    } else {
+                        li.style.pointerEvents = 'none';
+                        li.style.opacity = '0.6';
+                        li.style.cursor = 'not-allowed';
+                    }
+                    
                     optionsList.appendChild(li);
                 });
-                currentQuizId = data.id;
+                
+                if (alreadyAnswered) {
+                    document.getElementById('response').innerText = 'Vous avez déjà répondu à ce quiz';
+                } else {
+                    document.getElementById('response').innerText = '';
+                }
             });
 
             socket.on('session_status_changed', (data) => {
                 if (data.status === 'live') {
-                    fetch(`${backendUrl}/api/sessions/current`)
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data && data.id) {
-                                sessionId = data.id;
-                                socket.emit('join_session', { session_id: sessionId });
-                                if (videoSystem) {
-                                    loadHlsVideo(data.hls_url, videoSystem);
-                                }
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Erreur lors de la récupération de la session:', error);
-                            document.getElementById('response').innerText = 'Erreur lors de la récupération de la session';
-                        });
+                    checkCurrentSession();
                 } else if (data.status === 'ended') {
                     document.getElementById('response').innerText = 'La session a été terminée';
                     if (videoSystem && videoSystem.hls) {
@@ -225,14 +286,7 @@
 
             function checkCurrentSession() {
                 fetch(`${backendUrl}/api/sessions/current`)
-                    .then(response => {
-                        if (!response.ok) {
-                            console.error('Erreur API session:', response.status);
-                            document.getElementById('response').innerText = 'Aucune session en direct';
-                            return null;
-                        }
-                        return response.json();
-                    })
+                    .then(response => response.json())
                     .then(data => {
                         if (data && data.id) {
                             if (sessionId !== data.id) {
@@ -245,7 +299,6 @@
                             }
                         } else {
                             sessionId = null;
-                            document.getElementById('response').innerText = 'Aucune session en direct';
                             if (videoSystem && videoSystem.hls) {
                                 videoSystem.hls.destroy();
                             }
@@ -253,12 +306,50 @@
                     })
                     .catch(error => {
                         console.error('Erreur API:', error);
-                        document.getElementById('response').innerText = 'Erreur de connexion au serveur: ' + error.message;
                     });
             }
 
-            checkCurrentSession();
-            setInterval(checkCurrentSession, 10000); // Vérifier toutes les 10 secondes
+            function fetchQuizzes(id) {
+                fetch(`${backendUrl}/api/sessions/${id}/quizzes`)
+                    .then(response => response.json())
+                    .then(quizzes => {
+                        if (quizzes.length > 0) {
+                            const quiz = quizzes[quizzes.length - 1];
+                            const alreadyAnswered = checkQuizHistory(quiz.id);
+                            currentQuizId = quiz.id;
+                            
+                            document.getElementById('quiz-question').innerText = quiz.question;
+                            const optionsList = document.getElementById('quiz-options');
+                            optionsList.innerHTML = '';
+                            
+                            quiz.options.forEach((option, index) => {
+                                const li = document.createElement('li');
+                                li.innerText = option;
+                                li.tabIndex = 0;
+                                
+                                if (!alreadyAnswered) {
+                                    li.onclick = () => sendQuizResponse(quiz.id, index);
+                                    li.onkeypress = (e) => {
+                                        if (e.key === 'Enter') sendQuizResponse(quiz.id, index);
+                                    };
+                                } else {
+                                    li.style.pointerEvents = 'none';
+                                    li.style.opacity = '0.6';
+                                    li.style.cursor = 'not-allowed';
+                                }
+                                
+                                optionsList.appendChild(li);
+                            });
+                            
+                            if (alreadyAnswered) {
+                                document.getElementById('response').innerText = 'Vous avez déjà répondu à ce quiz';
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Erreur quizzes:', error);
+                    });
+            }
 
             function sendQuestion() {
                 const questionInput = document.getElementById('question-input').value;
@@ -272,56 +363,10 @@
                 }
             }
 
-            function fetchQuizzes(id) {
-                fetch(`${backendUrl}/api/sessions/${id}/quizzes`)
-                    .then(response => {
-                        if (!response.ok) {
-                            console.error('Erreur API quizzes:', response.status);
-                            document.getElementById('response').innerText = 'Aucun quiz disponible';
-                            return [];
-                        }
-                        return response.json();
-                    })
-                    .then(quizzes => {
-                        if (quizzes.length > 0) {
-                            const quiz = quizzes[quizzes.length - 1];
-                            document.getElementById('quiz-question').innerText = quiz.question;
-                            const optionsList = document.getElementById('quiz-options');
-                            optionsList.innerHTML = '';
-                            quiz.options.forEach((option, index) => {
-                                const li = document.createElement('li');
-                                li.innerText = option;
-                                li.tabIndex = 0;
-                                li.onclick = () => sendQuizResponse(quiz.id, index);
-                                li.onkeypress = (e) => {
-                                    if (e.key === 'Enter') sendQuizResponse(quiz.id, index);
-                                };
-                                optionsList.appendChild(li);
-                            });
-                            currentQuizId = quiz.id;
-                        } else {
-                            document.getElementById('response').innerText = 'Aucun quiz disponible';
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Erreur quizzes:', error);
-                        document.getElementById('response').innerText = 'Erreur lors du chargement des quizzes: ' + error.message;
-                    });
-            }
-
-            function sendQuizResponse(quizId, selectedOption) {
-                if (sessionId) {
-                    socket.emit('quiz_response', {
-                        session_id: sessionId,
-                        quiz_id: quizId,
-                        selected_option: selectedOption
-                    });
-                    document.getElementById('response').innerText = 'Réponse envoyée !';
-                }
-            }
+            checkCurrentSession();
+            setInterval(checkCurrentSession, 10000);
 
             window.sendQuestion = sendQuestion;
-            window.sendQuizResponse = sendQuizResponse;
             window.seekToLive = seekToLive;
         });
     </script>

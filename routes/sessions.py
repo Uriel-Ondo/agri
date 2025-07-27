@@ -1,12 +1,15 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app
 from flask_login import login_required, current_user
 from extensions import db, socketio, redis_client
-from models import Session, Question, Quiz
+from models import Session, Question, Quiz, QuizResponse
 import uuid
 from datetime import datetime
 import json
+import logging
 
 sessions_bp = Blueprint('sessions', __name__)
+
+logger = logging.getLogger(__name__)
 
 @sessions_bp.route('/create_session', methods=['GET', 'POST'])
 @login_required
@@ -82,7 +85,7 @@ def manage_session(session_id):
                 
                 question = Question.query.filter_by(
                     id=question_id,
-                    session_id=session_id  # Vérification cruciale
+                    session_id=session_id
                 ).first_or_404()
                 
                 question.answer_text = answer_text
@@ -105,18 +108,26 @@ def manage_session(session_id):
                 flash('Réponse enregistrée avec succès !', 'success')
                 
             elif 'delete_session' in request.form:
-                # Suppression en cascade des questions et quizzes associés
-                Question.query.filter_by(session_id=session_id).delete()
-                Quiz.query.filter_by(session_id=session_id).delete()
+                # Suppression en cascade sécurisée
+                logger.info(f"Tentative de suppression de la session {session_id}")
+                
+                # D'abord supprimer toutes les réponses aux quiz
+                quiz_ids = [quiz.id for quiz in session.quizzes]
+                if quiz_ids:
+                    QuizResponse.query.filter(QuizResponse.quiz_id.in_(quiz_ids)).delete(synchronize_session=False)
+                    db.session.flush()
+                
+                # Puis supprimer la session (les cascades s'occuperont du reste)
                 db.session.delete(session)
                 db.session.commit()
                 
-                flash('Session supprimée avec succès', 'success')
+                flash('Session et tous ses contenus supprimés avec succès', 'success')
                 return redirect(url_for('main.dashboard'))
                 
         except Exception as e:
             db.session.rollback()
-            flash(f"Erreur lors de la mise à jour: {str(e)}", 'danger')
+            logger.error(f"Erreur lors de la suppression de la session {session_id}: {str(e)}")
+            flash(f"Erreur lors de la suppression: {str(e)}", 'danger')
     
     questions = Question.query.filter_by(session_id=session_id).order_by(Question.timestamp.asc()).all()
     quizzes = Quiz.query.filter_by(session_id=session_id).order_by(Quiz.timestamp.desc()).all()
@@ -144,17 +155,24 @@ def delete_session(session_id):
         return redirect(url_for('main.dashboard'))
     
     try:
-        with db.session.begin():
-            # Suppression en cascade
-            Question.query.filter_by(session_id=session_id).delete()
-            Quiz.query.filter_by(session_id=session_id).delete()
-            db.session.delete(session)
+        logger.info(f"Suppression de la session {session_id} via la route dédiée")
+        
+        # D'abord supprimer toutes les réponses aux quiz
+        quiz_ids = [quiz.id for quiz in session.quizzes]
+        if quiz_ids:
+            QuizResponse.query.filter(QuizResponse.quiz_id.in_(quiz_ids)).delete(synchronize_session=False)
+            db.session.flush()
+        
+        # Puis supprimer la session
+        db.session.delete(session)
+        db.session.commit()
             
         flash('Session supprimée avec succès', 'success')
         return redirect(url_for('admin.admin_dashboard' if current_user.role == 'admin' else 'main.dashboard'))
         
     except Exception as e:
         db.session.rollback()
+        logger.error(f"Erreur lors de la suppression de la session {session_id}: {str(e)}")
         flash(f"Erreur lors de la suppression: {str(e)}", 'danger')
         return redirect(url_for('sessions.manage_session', session_id=session_id))
 
