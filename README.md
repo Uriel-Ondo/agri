@@ -108,8 +108,7 @@ Créer la base de données et les tables :
 ```sql
 mysql -u root -p
 CREATE DATABASE agri_assist;
-USE agri_assist;
-source database/schema.sql;
+exit;
 ```
 
 #### 4. Configurer SRS
