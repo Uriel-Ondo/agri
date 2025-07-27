@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Inscription - Dr Santé{% endblock %}
+{% block content %}
+<section class="section slide-in">
+    <div class="container">
+        <div class="card mx-auto card-float" style="max-width: 400px;">
+            <div class="card-header">
+                <h3><i class="fa-solid fa-user-plus"></i> Créer un compte</h3>
+            </div>
+            <div class="card-body">
+                <form id="registerForm" method="POST">
+                    <div class="mb-4 form-group">
+                        <label for="username" class="form-label"><i class="fa-solid fa-user"></i> Nom d'utilisateur</label>
+                        <input type="text" class="form-control" id="username" name="username" required>
+                    </div>
+                    <div class="mb-4 form-group">
+                        <label for="email" class="form-label"><i class="fa-solid fa-envelope"></i> Adresse email</label>
+                        <input type="email" class="form-control" id="email" name="email" required>
+                    </div>
+                    <div class="mb-4 form-group">
+                        <label for="password" class="form-label"><i class="fa-solid fa-lock"></i> Mot de passe</label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                    </div>
+                    <div class="mb-4 form-group">
+                        <label for="confirm_password" class="form-label"><i class="fa-solid fa-lock"></i> Confirmer le mot de passe</label>
+                        <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <button type="button" class="btn btn-primary btn-pulse" data-bs-toggle="modal" data-bs-target="#registerModal"><i class="fa-solid fa-user-check"></i> S'inscrire</button>
+                        <a href="{{ url_for('auth.login') }}" class="text-muted" data-bs-toggle="tooltip" title="Déjà un compte ? Connectez-vous">Se connecter</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Modal pour inscription -->
+<div class="modal fade" id="registerModal" tabindex="-1" aria-labelledby="registerModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="registerModalLabel"><i class="fa-solid fa-user-plus"></i> Confirmer l'inscription</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Voulez-vous créer ce compte ?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" onclick="document.getElementById('registerForm').submit()">Confirmer</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

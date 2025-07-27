@@ -39,4 +39,4 @@ if __name__ == '__main__':
                 db.session.commit()
                 print(f"Admin user {admin_name} created")
 
-    socketio.run(app, debug=True, host='0.0.0.0', port=5001)/.
+    socketio.run(app, debug=True, host='0.0.0.0', port=5001)

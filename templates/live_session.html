@@ -1,9 +1,0 @@
-{% if stream_active %}
-<video id="player" controls>
-  <source src="{{ hls_url }}" type="application/x-mpegURL">
-</video>
-{% else %}
-<div class="alert alert-warning">
-  Le flux n'est pas actif pour le moment. Veuillez réessayer plus tard.
-</div>
-{% endif %}

@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Diffusion - {{ session.title }} - Dr Santé{% endblock %}
+{% block content %}
+<section class="section slide-in">
+    <div class="container">
+        <h2 class="mb-4"><i class="fa-solid fa-video"></i> Diffusion : {{ session.title }}</h2>
+        <div class="card">
+            <div class="card-header">
+                <h3>Consultation en direct</h3>
+            </div>
+            <div class="card-body">
+                <div class="video-container">
+                    <video id="preview" class="video-player" muted playsinline></video>
+                    <div class="video-controls mt-3 d-flex gap-2 justify-content-center">
+                        <button id="startBroadcast" class="btn btn-primary btn-pulse" data-bs-toggle="modal" data-bs-target="#startBroadcastModal"><i class="fa-solid fa-play"></i> Démarrer</button>
+                        <button id="stopBroadcast" class="btn btn-danger" disabled data-bs-toggle="modal" data-bs-target="#stopBroadcastModal"><i class="fa-solid fa-stop"></i> Arrêter</button>
+                    </div>
+                </div>
+                <div class="alert alert-info mt-4 notification-pulse">
+                    <i class="fa-solid fa-info-circle"></i>
+                    <strong>URL de diffusion :</strong> rtmp://srs_server/live/{{ session.stream_key }}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Modal pour démarrer la diffusion -->
+<div class="modal fade" id="startBroadcastModal" tabindex="-1" aria-labelledby="startBroadcastModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="startBroadcastModalLabel"><i class="fa-solid fa-video"></i> Démarrer la diffusion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Êtes-vous sûr de vouloir démarrer la diffusion de la consultation "{{ session.title }}" ?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" id="confirmStartBroadcast">Confirmer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal pour arrêter la diffusion -->
+<div class="modal fade" id="stopBroadcastModal" tabindex="-1" aria-labelledby="stopBroadcastModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="stopBroadcastModalLabel"><i class="fa-solid fa-stop"></i> Arrêter la diffusion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Êtes-vous sûr de vouloir arrêter la diffusion de la consultation "{{ session.title }}" ?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-danger" id="confirmStopBroadcast">Confirmer</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const startBtn = document.getElementById('startBroadcast');
+    const stopBtn = document.getElementById('stopBroadcast');
+    const confirmStartBtn = document.getElementById('confirmStartBroadcast');
+    const confirmStopBtn = document.getElementById('confirmStopBroadcast');
+    const preview = document.getElementById('preview');
+    let stream = null;
+
+    async function startBroadcasting() {
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            preview.srcObject = stream;
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+            bootstrap.Modal.getInstance(document.getElementById('startBroadcastModal')).hide();
+        } catch (error) {
+            console.error('Erreur d\'accès aux périphériques:', error);
+            alert('Erreur d\'accès à la caméra ou au micro');
+        }
+    }
+
+    function stopBroadcasting() {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+            preview.srcObject = null;
+            stream = null;
+        }
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+        bootstrap.Modal.getInstance(document.getElementById('stopBroadcastModal')).hide();
+    }
+
+    confirmStartBtn.addEventListener('click', startBroadcasting);
+    confirmStopBtn.addEventListener('click', stopBroadcasting);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Créer un utilisateur - Dr Santé{% endblock %}
+{% block content %}
+<section class="section slide-in">
+    <div class="container">
+        <div class="card mx-auto card-float" style="max-width: 500px;">
+            <div class="card-header">
+                <h3><i class="fa-solid fa-user-plus"></i> Créer un nouvel utilisateur</h3>
+            </div>
+            <div class="card-body">
+                <form id="createUserForm" method="POST">
+                    <div class="mb-4 form-group">
+                        <label for="username" class="form-label"><i class="fa-solid fa-user"></i> Nom d'utilisateur</label>
+                        <input type="text" class="form-control" id="username" name="username" required>
+                    </div>
+                    <div class="mb-4 form-group">
+                        <label for="email" class="form-label"><i class="fa-solid fa-envelope"></i> Email</label>
+                        <input type="email" class="form-control" id="email" name="email" required>
+                    </div>
+                    <div class="mb-4 form-group">
+                        <label for="password" class="form-label"><i class="fa-solid fa-lock"></i> Mot de passe</label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                        <small class="form-text text-muted">Minimum 8 caractères</small>
+                    </div>
+                    <div class="mb-4 form-group">
+                        <label for="role" class="form-label"><i class="fa-solid fa-user-tag"></i> Rôle</label>
+                        <select class="form-select" id="role" name="role">
+                            <option value="expert">Médecin</option>
+                            <option value="admin">Administrateur</option>
+                        </select>
+                    </div>
+                    <div class="d-flex justify-content-end gap-2">
+                        <button type="button" class="btn btn-primary btn-pulse" data-bs-toggle="modal" data-bs-target="#createUserModal"><i class="fa-solid fa-check"></i> Créer</button>
+                        <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-secondary" data-bs-toggle="tooltip" title="Retour au tableau de bord"><i class="fa-solid fa-times"></i> Annuler</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Modal pour créer l'utilisateur -->
+<div class="modal fade" id="createUserModal" tabindex="-1" aria-labelledby="createUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createUserModalLabel"><i class="fa-solid fa-user-plus"></i> Confirmer la création</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Voulez-vous créer cet utilisateur ?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" onclick="document.getElementById('createUserForm').submit()">Confirmer</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

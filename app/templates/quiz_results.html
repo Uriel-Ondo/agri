@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Résultats du Quiz - {{ quiz.question }} - Dr Santé{% endblock %}
+{% block content %}
+<section class="section slide-in">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="fa-solid fa-chart-bar"></i> Résultats : {{ quiz.question }}</h2>
+            <a href="{{ url_for('sessions.manage_session', session_id=session_id) }}" class="btn btn-secondary btn-pulse" data-bs-toggle="tooltip" title="Retour à la gestion"><i class="fa-solid fa-arrow-left"></i> Retour</a>
+        </div>
+        <div class="card card-float">
+            <div class="card-body">
+                <div class="results-list">
+                    {% for i in range(quiz.options|length) %}
+                    <div class="result-item mb-3 result-slide" data-bs-toggle="tooltip" title="{{ quiz.options[i] }} : {{ results[i] }} votes">
+                        <span class="option-text">
+                            {% if i == quiz.correct_answer %}
+                            <strong class="text-success">{{ quiz.options[i] }}</strong>
+                            {% else %}
+                            {{ quiz.options[i] }}
+                            {% endif %}
+                        </span>
+                        <span class="vote-count">{{ results[i] }} votes</span>
+                        <div class="progress mt-2" style="height: 25px;">
+                            <div class="progress-bar {% if i == quiz.correct_answer %}bg-success{% else %}bg-primary{% endif %}"
+                                 role="progressbar"
+                                 style="width: {{ (results[i]/results|sum * 100) if results|sum > 0 else 0 }}%"
+                                 aria-valuenow="{{ results[i] }}"
+                                 aria-valuemin="0"
+                                 aria-valuemax="{{ results|sum }}">
+                                {{ results[i] }}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

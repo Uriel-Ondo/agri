@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Modifier l'utilisateur - Dr Santé{% endblock %}
+{% block content %}
+<section class="section slide-in">
+    <div class="container">
+        <div class="card mx-auto card-float" style="max-width: 500px;">
+            <div class="card-header">
+                <h3><i class="fa-solid fa-user-gear"></i> Modifier l'utilisateur : {{ user.username }}</h3>
+            </div>
+            <div class="card-body">
+                <form id="editUserForm" method="POST">
+                    <div class="mb-4 form-group">
+                        <label for="username" class="form-label"><i class="fa-solid fa-user"></i> Nom d'utilisateur</label>
+                        <input type="text" class="form-control" id="username" name="username" value="{{ user.username }}" required>
+                    </div>
+                    <div class="mb-4 form-group">
+                        <label for="email" class="form-label"><i class="fa-solid fa-envelope"></i> Email</label>
+                        <input type="email" class="form-control" id="email" name="email" value="{{ user.email }}" required>
+                    </div>
+                    <div class="mb-4 form-group">
+                        <label for="role" class="form-label"><i class="fa-solid fa-user-tag"></i> Rôle</label>
+                        <select class="form-select" id="role" name="role">
+                            <option value="expert" {% if user.role == 'expert' %}selected{% endif %}>Médecin</option>
+                            <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>Administrateur</option>
+                        </select>
+                    </div>
+                    <div class="mb-4 form-group">
+                        <label for="password" class="form-label"><i class="fa-solid fa-lock"></i> Nouveau mot de passe</label>
+                        <input type="password" class="form-control" id="password" name="password">
+                        <small class="form-text text-muted">Laisser vide pour ne pas changer</small>
+                    </div>
+                    <div class="d-flex justify-content-end gap-2">
+                        <button type="button" class="btn btn-primary btn-pulse" data-bs-toggle="modal" data-bs-target="#editUserModal" data-bs-toggle="tooltip" title="Enregistrer les modifications"><i class="fa-solid fa-save"></i> Enregistrer</button>
+                        <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-secondary" data-bs-toggle="tooltip" title="Retour au tableau de bord"><i class="fa-solid fa-times"></i> Annuler</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Modal pour modifier l'utilisateur -->
+<div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content modal-glow">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editUserModalLabel"><i class="fa-solid fa-user-gear"></i> Confirmer la modification</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Voulez-vous enregistrer les modifications pour l'utilisateur "{{ user.username }}" ?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary btn-pulse" onclick="document.getElementById('editUserForm').submit()">Confirmer</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

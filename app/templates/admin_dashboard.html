@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block title %}Tableau de bord Administrateur - Dr Santé{% endblock %}
+{% block content %}
+<section class="section slide-in">
+    <div class="container">
+        <h2 class="mb-5"><i class="fa-solid fa-user-shield"></i> Tableau de bord Administrateur</h2>
+        
+        <!-- Gestion des utilisateurs -->
+        <div class="card mb-5 card-float">
+            <div class="card-header">
+                <h3><i class="fa-solid fa-users"></i> Gestion des utilisateurs</h3>
+            </div>
+            <div class="card-body">
+                <a href="{{ url_for('admin.admin_create_user') }}" class="btn btn-primary btn-pulse mb-4" data-bs-toggle="tooltip" title="Ajouter un nouvel utilisateur"><i class="fa-solid fa-plus"></i> Ajouter un utilisateur</a>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nom</th>
+                                <th>Email</th>
+                                <th>Rôle</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in users %}
+                            <tr class="table-row-slide">
+                                <td>{{ user.id }}</td>
+                                <td>{{ user.username }}</td>
+                                <td>{{ user.email }}</td>
+                                <td>
+                                    <span class="badge bg-{% if user.role == 'admin' %}danger{% else %}primary{% endif %}">
+                                        {{ user.role }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="d-flex gap-2">
+                                        <a href="{{ url_for('admin.admin_edit_user', user_id=user.id) }}" class="btn btn-primary btn-sm btn-pulse" data-bs-toggle="tooltip" title="Modifier l'utilisateur"><i class="fa-solid fa-edit"></i></a>
+                                        <button type="button" class="btn btn-danger btn-sm btn-pulse" data-bs-toggle="modal" data-bs-target="#deleteUserModal-{{ user.id }}"><i class="fa-solid fa-trash"></i></button>
+                                        <!-- Modal pour supprimer l'utilisateur -->
+                                        <div class="modal fade" id="deleteUserModal-{{ user.id }}" tabindex="-1" aria-labelledby="deleteUserModalLabel-{{ user.id }}" aria-hidden="true">
+                                            <div class="modal-dialog modal-dialog-centered">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title" id="deleteUserModalLabel-{{ user.id }}"><i class="fa-solid fa-trash"></i> Supprimer l'utilisateur</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        Êtes-vous sûr de vouloir supprimer l'utilisateur "{{ user.username }}" ?
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                                                        <form action="{{ url_for('admin.admin_delete_user', user_id=user.id) }}" method="POST">
+                                                            <button type="submit" class="btn btn-danger">Confirmer</button>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gestion des consultations -->
+        <div class="card card-float">
+            <div class="card-header">
+                <h3><i class="fa-solid fa-calendar-check"></i> Gestion des consultations</h3>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Titre</th>
+                                <th>Médecin</th>
+                                <th>Statut</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for session in sessions %}
+                            <tr class="table-row-slide">
+                                <td>{{ session.id }}</td>
+                                <td>{{ session.title }}</td>
+                                <td>{{ session.user.username }}</td>
+                                <td>
+                                    <span class="badge bg-{% if session.status == 'active' %}success{% else %}warning{% endif %}">
+                                        {{ session.status }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="d-flex gap-2">
+                                        <a href="{{ url_for('sessions.manage_session', session_id=session.id) }}" class="btn btn-primary btn-sm btn-pulse" data-bs-toggle="tooltip" title="Gérer la consultation"><i class="fa-solid fa-cog"></i></a>
+                                        <button type="button" class="btn btn-danger btn-sm btn-pulse" data-bs-toggle="modal" data-bs-target="#deleteSessionModal-{{ session.id }}"><i class="fa-solid fa-trash"></i></button>
+                                        <!-- Modal pour supprimer la consultation -->
+                                        <div class="modal fade" id="deleteSessionModal-{{ session.id }}" tabindex="-1" aria-labelledby="deleteSessionModalLabel-{{ session.id }}" aria-hidden="true">
+                                            <div class="modal-dialog modal-dialog-centered">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title" id="deleteSessionModalLabel-{{ session.id }}"><i class="fa-solid fa-trash"></i> Supprimer la consultation</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        Êtes-vous sûr de vouloir supprimer la consultation "{{ session.title }}" ?
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                                                        <form action="{{ url_for('sessions.delete_session', session_id=session.id) }}" method="POST">
+                                                            <button type="submit" class="btn btn-danger">Confirmer</button>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

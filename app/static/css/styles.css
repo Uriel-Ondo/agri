@@ -1,0 +1,367 @@
+/* Palette de couleurs médicale (identique à la plateforme web) */
+:root {
+    --primary-blue: #007BFF; /* Bleu médical */
+    --secondary-blue: #E6F0FA; /* Bleu clair */
+    --white: #FFFFFF;
+    --gray: #6C757D; /* Gris pour texte */
+    --success-green: #28A745; /* Vert médical */
+    --danger-red: #DC3545; /* Rouge pour actions */
+    --warning-yellow: #FFC107; /* Jaune pour en attente */
+    --hbbtv-red: #FF0000; /* Bouton rouge HbbTV */
+    --hbbtv-green: #00FF00; /* Bouton vert HbbTV */
+    --hbbtv-blue: #0000FF; /* Bouton bleu HbbTV */
+    --text-dark: #212121;
+    --text-light: #FFFFFF;
+    --card-bg: #F8F9FA; /* Fond carte médical */
+}
+
+/* Réinitialisation et style global */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Roboto', sans-serif;
+    background-color: var(--secondary-blue);
+    color: var(--text-dark);
+    margin: 0;
+    padding: 10px;
+    height: 100vh;
+    overflow: hidden;
+    background-image: linear-gradient(to bottom, var(--secondary-blue), var(--white));
+}
+
+/* Conteneur principal avec fond dynamique subtil */
+.app-container {
+    display: flex;
+    height: 100%;
+    gap: 10px;
+    position: relative;
+    overflow: hidden;
+    animation: subtle-glow 10s ease-in-out infinite alternate;
+}
+
+/* Colonnes */
+.left-column, .center-column, .right-column {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.left-column {
+    width: 25%;
+    background-color: var(--card-bg);
+    border: 2px solid var(--success-green);
+}
+
+.center-column {
+    width: 50%;
+    background-color: #000;
+}
+
+.right-column {
+    width: 25%;
+    background-color: var(--card-bg);
+    border: 2px solid var(--success-green);
+}
+
+/* Cards */
+.card {
+    background-color: var(--white);
+    border-radius: 5px;
+    padding: 10px;
+    margin-bottom: 10px;
+    border-left: 4px solid var(--success-green);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+}
+
+.card-header {
+    background-color: var(--primary-blue);
+    color: var(--text-light);
+    padding: 10px;
+    border-radius: 5px 5px 0 0;
+    font-size: 1.5em;
+    text-align: center;
+    border-bottom: 2px dashed var(--white);
+    animation: glow 3s ease-in-out infinite alternate;
+}
+
+.card-body {
+    padding: 15px;
+    flex: 1;
+    position: relative;
+}
+
+/* Conteneur Vidéo */
+#video-container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 5px;
+}
+
+.video-player {
+    width: 100%;
+    height: calc(70% - 60px); /* Ajusté pour éviter cadre supplémentaire */
+    background: #000;
+    border-radius: 4px;
+    margin-bottom: 10px;
+}
+
+#live-button {
+    height: 30px;
+    background-color: var(--primary-blue);
+    color: var(--text-light);
+    border: none;
+    border-radius: 4px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+#live-button:hover, #live-button:focus {
+    background-color: var(--gray);
+    transform: translateY(-2px);
+}
+
+#live-button:focus {
+    outline: 3px solid var(--hbbtv-blue);
+}
+
+/* Quiz */
+#quiz-container {
+    padding: 15px;
+    height: 100%;
+    overflow-y: auto;
+    background-color: var(--card-bg);
+}
+
+#quiz-container h2 {
+    color: var(--text-light);
+    font-size: 1.5em;
+    margin-bottom: 15px;
+    padding-bottom: 5px;
+    text-align: center;
+}
+
+.quiz-question {
+    font-weight: bold;
+    margin: 15px 0;
+    padding: 10px;
+    background-color: var(--secondary-blue);
+    border-radius: 5px;
+    border-left: 4px solid var(--primary-blue);
+    font-size: 1.2em;
+}
+
+.quiz-options {
+    list-style: none;
+    padding: 0 5px;
+}
+
+.quiz-option {
+    background-color: var(--success-green);
+    color: var(--text-light);
+    padding: 12px;
+    margin-bottom: 8px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.2s ease;
+    border: 1px solid var(--primary-blue);
+    box-shadow: 0 2px 3px rgba(0, 0, 0, 0.1);
+}
+
+.quiz-option:hover, .quiz-option:focus {
+    background-color: var(--primary-blue);
+    transform: translateY(-2px);
+    outline: none;
+}
+
+.quiz-option:focus {
+    box-shadow: 0 0 0 3px var(--hbbtv-green);
+}
+
+/* Formulaire de question */
+#question-form {
+    padding: 15px;
+    background-color: var(--card-bg);
+    border-bottom: 2px solid var(--success-green);
+}
+
+#question-form h2 {
+    color: var(--text-light);
+    font-size: 1.5em;
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+#question-input {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid var(--gray);
+    border-radius: 4px;
+    font-size: 1em;
+}
+
+#question-form button {
+    width: 100%;
+    padding: 10px;
+    background-color: var(--danger-red);
+    color: var(--text-light);
+    border: none;
+    border-radius: 4px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+#question-form button:hover, #question-form button:focus {
+    background-color: var(--gray);
+    transform: translateY(-2px);
+}
+
+#question-form button:focus {
+    box-shadow: 0 0 0 3px var(--hbbtv-red);
+}
+
+/* Questions/Réponses */
+#questions-container {
+    padding: 15px;
+    flex-grow: 1;
+    overflow-y: auto;
+    background-color: var(--card-bg);
+}
+
+#questions-container h2 {
+    color: var(--text-light);
+    font-size: 1.5em;
+    margin-bottom: 15px;
+    text-align: center;
+    border-bottom: 2px dashed var(--primary-blue);
+    padding-bottom: 5px;
+}
+
+.questions-list {
+    max-height: calc(100% - 60px); /* Ajusté pour titre visible */
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary-blue) var(--white);
+}
+
+.questions-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.questions-list::-webkit-scrollbar-track {
+    background: var(--white);
+}
+
+.questions-list::-webkit-scrollbar-thumb {
+    background: var(--primary-blue);
+    border-radius: 4px;
+}
+
+.question-slide {
+    animation: slide-in 0.5s ease-out;
+}
+
+.card p {
+    margin: 5px 0;
+    font-size: 1em;
+}
+
+.card p strong {
+    color: var(--primary-blue);
+}
+
+.card small {
+    color: var(--gray);
+    font-size: 0.8em;
+}
+
+/* Indications HbbTV */
+.hbbtv-hint {
+    font-size: 1em;
+    color: var(--gray);
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+/* Message de réponse */
+.response-message {
+    position: fixed;
+    bottom: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(--primary-blue);
+    color: var(--text-light);
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-weight: bold;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    z-index: 100;
+    animation: sparkle 3s ease;
+}
+
+/* Animations */
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+@keyframes slide-in {
+    from { transform: translateX(50px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes glow {
+    0% { text-shadow: 0 0 5px rgba(255, 255, 255, 0.5); }
+    100% { text-shadow: 0 0 10px rgba(255, 255, 255, 0.8); }
+}
+
+@keyframes sparkle {
+    0% { opacity: 0; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2); }
+    10% { opacity: 1; box-shadow: 0 2px 15px rgba(0, 123, 255, 0.7); }
+    50% { box-shadow: 0 2px 20px rgba(0, 123, 255, 1); }
+    90% { opacity: 1; box-shadow: 0 2px 15px rgba(0, 123, 255, 0.7); }
+    100% { opacity: 0; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2); }
+}
+
+@keyframes subtle-glow {
+    0% { background-image: linear-gradient(to bottom, var(--secondary-blue), var(--white)); }
+    100% { background-image: linear-gradient(to bottom, var(--secondary-blue), var(--secondary-blue)); }
+}
+
+/* Focus pour navigation TV */
+:focus {
+    outline: 3px solid var(--primary-blue);
+    outline-offset: 2px;
+}
+
+/* Icônes */
+.fa-solid {
+    margin-right: 5px;
+}
+
+/* Optimisation pour TV */
+@media (max-width: 1280px) {
+    .card-header, .quiz-question, #question-form h2, #questions-container h2 {
+        font-size: 1.3em;
+    }
+    .quiz-option, .card, #question-input, #question-form button, .hbbtv-hint {
+        font-size: 0.9em;
+        padding: 8px;
+    }
+}

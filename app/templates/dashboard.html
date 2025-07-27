@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}Tableau de bord - Dr Santé{% endblock %}
+
+{% block content %}
+<section class="section slide-in">
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fa-solid fa-tachometer-alt"></i> Mes Sessions</h3>
+            </div>
+            <div class="card-body">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Titre</th>
+                            <th>Date de début</th>
+                            <th>Date de fin</th>
+                            <th>Statut</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for session in sessions %}
+                        <tr class="table-row-slide">
+                            <td>{{ session.title }}</td>
+                            <td>{{ session.start_time.strftime('%d/%m/%Y %H:%M') }}</td>
+                            <td>{{ session.end_time.strftime('%d/%m/%Y %H:%M') }}</td>
+                            <td>
+                                <span class="badge bg-{% if session.status == 'scheduled' %}info{% elif session.status == 'live' %}success{% else %}secondary{% endif %}">
+                                    {% if session.status == 'scheduled' %}
+                                        Programmée
+                                    {% elif session.status == 'live' %}
+                                        En cours
+                                    {% else %}
+                                        Terminée
+                                    {% endif %}
+                                </span>
+                            </td>
+                            <td>
+                                <a href="{{ url_for('sessions.manage_session', session_id=session.id) }}" class="btn btn-primary btn-sm"><i class="fa-solid fa-edit"></i> Gérer</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

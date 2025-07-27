@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Créer une consultation - Dr Santé{% endblock %}
+{% block content %}
+<section class="section slide-in">
+    <div class="container">
+        <div class="card mx-auto" style="max-width: 600px;">
+            <div class="card-header">
+                <h3><i class="fa-solid fa-plus-circle"></i> Créer un nouveau live</h3>
+            </div>
+            <div class="card-body">
+                <form id="sessionForm" method="POST">
+                    <div class="mb-4 form-group">
+                        <label for="title" class="form-label"><i class="fa-solid fa-heading"></i> Titre</label>
+                        <input type="text" class="form-control" id="title" name="title" required>
+                    </div>
+                    <div class="mb-4 form-group">
+                        <label for="description" class="form-label"><i class="fa-solid fa-align-left"></i> Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-4 form-group">
+                            <label for="start_time" class="form-label"><i class="fa-solid fa-clock"></i> Date et heure de début</label>
+                            <input type="datetime-local" class="form-control" id="start_time" name="start_time" required>
+                        </div>
+                        <div class="col-md-6 mb-4 form-group">
+                            <label for="end_time" class="form-label"><i class="fa-solid fa-clock"></i> Date et heure de fin</label>
+                            <input type="datetime-local" class="form-control" id="end_time" name="end_time" required>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-end gap-2">
+                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createSessionModal"><i class="fa-solid fa-check"></i> Créer</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Modal pour créer la consultation -->
+<div class="modal fade" id="createSessionModal" tabindex="-1" aria-labelledby="createSessionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createSessionModalLabel"><i class="fa-solid fa-plus-circle"></i> Confirmer la création</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Voulez-vous créer cette session live ?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" onclick="document.getElementById('sessionForm').submit()">Confirmer</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

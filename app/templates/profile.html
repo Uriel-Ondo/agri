@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Mon Profil - Dr Santé{% endblock %}
+{% block content %}
+<section class="section slide-in">
+    <div class="container">
+        <div class="card mx-auto card-float" style="max-width: 600px;">
+            <div class="card-header">
+                <h3><i class="fa-solid fa-user-circle"></i> Mon Profil</h3>
+            </div>
+            <div class="card-body">
+                <form id="profileForm" method="POST">
+                    <div class="mb-4 form-group">
+                        <label class="form-label"><i class="fa-solid fa-user"></i> Nom d'utilisateur</label>
+                        <div class="form-control-plaintext">{{ current_user.username }}</div>
+                    </div>
+                    <div class="mb-4 form-group">
+                        <label for="email" class="form-label"><i class="fa-solid fa-envelope"></i> Email</label>
+                        <input type="email" class="form-control" id="email" name="email" value="{{ current_user.email }}" required>
+                    </div>
+                    <div class="mb-4 form-group">
+                        <label for="current_password" class="form-label"><i class="fa-solid fa-lock"></i> Mot de passe actuel</label>
+                        <input type="password" class="form-control" id="current_password" name="current_password" required>
+                        <small class="form-text text-muted">Requis pour toute modification</small>
+                    </div>
+                    <div class="mb-4 form-group">
+                        <label for="new_password" class="form-label"><i class="fa-solid fa-lock"></i> Nouveau mot de passe</label>
+                        <input type="password" class="form-control" id="new_password" name="new_password">
+                        <small class="form-text text-muted">Laisser vide pour ne pas changer</small>
+                    </div>
+                    <div class="mb-4 form-group">
+                        <label for="confirm_password" class="form-label"><i class="fa-solid fa-lock"></i> Confirmer le mot de passe</label>
+                        <input type="password" class="form-control" id="confirm_password" name="confirm_password">
+                        <small class="form-text text-muted">Confirmez votre nouveau mot de passe</small>
+                    </div>
+                    <div class="d-flex justify-content-end gap-2">
+                        <button type="button" class="btn btn-primary btn-pulse" data-bs-toggle="modal" data-bs-target="#updateProfileModal"><i class="fa-solid fa-save"></i> Mettre à jour</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Modal pour mettre à jour le profil -->
+<div class="modal fade" id="updateProfileModal" tabindex="-1" aria-labelledby="updateProfileModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="updateProfileModalLabel"><i class="fa-solid fa-user-circle"></i> Mettre à jour le profil</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Confirmez-vous la mise à jour de votre profil ?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" onclick="document.getElementById('profileForm').submit()">Confirmer</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
