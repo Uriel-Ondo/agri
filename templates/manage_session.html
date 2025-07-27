@@ -38,9 +38,12 @@
                         <p>Pour diffuser votre session en direct avec OBS Studio :</p>
                         <ol>
                             <li>Ouvrez OBS Studio</li>
-                            <li>Allez dans "Paramètres" > "Stream"</li>
-                            <li>Sélectionnez "Custom" comme service</li>
-                            <li>Entrez l'URL RTMP ci-dessus</li>
+                            <li>Allez dans "Paramètres" > "Stream(flux) "</li>
+                            <li>Sélectionnez "Custom(Personalisé...)" comme service</li>
+                            <li>Serveur > Entrez l'URL RTMP: "ex(rtmp://localhost:1935/live/)" </li>
+                            <li>Clé de stream > Entrez le code stream: ex(session_cec7963f) </li>
+                            <li>Cliquez sur "Appliquer"</li>
+                            <li>Cliquez sur "OK"</li>
                             <li>Cliquez sur "Commencer le streaming"</li>
                         </ol>
                     </div>
@@ -61,87 +64,91 @@
 
     <div class="questions-section">
         <h3><i class="bi bi-question-circle"></i> Questions des agriculteurs</h3>
-        <div id="questions">
-            {% for question in questions %}
-                <div class="question-card card mb-2" data-question-id="{{ question.id }}">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between">
-                            <div>
-                                <p class="mb-1"><strong>Question :</strong> {{ question.question_text }}</p>
-                                <small class="text-muted">{{ question.timestamp.strftime('%d/%m/%Y %H:%M') }}</small>
+        <div id="questions-container" class="scrollable-container" data-min-items="3">
+            <div id="questions">
+                {% for question in questions %}
+                    <div class="question-card card mb-2" data-question-id="{{ question.id }}">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <p class="mb-1"><strong>Question :</strong> {{ question.question_text }}</p>
+                                    <small class="text-muted">{{ question.timestamp.strftime('%d/%m/%Y %H:%M') }}</small>
+                                </div>
+                                {% if not question.answer_text %}
+                                    <span class="badge bg-warning text-dark">En attente</span>
+                                {% endif %}
                             </div>
-                            {% if not question.answer_text %}
-                                <span class="badge bg-warning text-dark">En attente</span>
+                            
+                            {% if question.answer_text %}
+                                <div class="mt-2 p-2 bg-light rounded">
+                                    <p class="mb-0"><strong>Réponse :</strong> {{ question.answer_text }}</p>
+                                </div>
+                            {% else %}
+                                <form method="POST" class="answer-form mt-2">
+                                    <input type="hidden" name="question_id" value="{{ question.id }}">
+                                    <div class="mb-2">
+                                        <textarea class="form-control" name="answer_text" placeholder="Votre réponse..." rows="2"></textarea>
+                                    </div>
+                                    <button type="submit" name="answer" class="btn btn-sm btn-primary">
+                                        <i class="bi bi-send"></i> Répondre
+                                    </button>
+                                </form>
                             {% endif %}
                         </div>
-                        
-                        {% if question.answer_text %}
-                            <div class="mt-2 p-2 bg-light rounded">
-                                <p class="mb-0"><strong>Réponse :</strong> {{ question.answer_text }}</p>
-                            </div>
-                        {% else %}
-                            <form method="POST" class="answer-form mt-2">
-                                <input type="hidden" name="question_id" value="{{ question.id }}">
-                                <div class="mb-2">
-                                    <textarea class="form-control" name="answer_text" placeholder="Votre réponse..." rows="2"></textarea>
-                                </div>
-                                <button type="submit" name="answer" class="btn btn-sm btn-primary">
-                                    <i class="bi bi-send"></i> Répondre
-                                </button>
-                            </form>
-                        {% endif %}
                     </div>
-                </div>
-            {% endfor %}
+                {% endfor %}
+            </div>
         </div>
     </div>
 
     <div class="quizzes-section">
         <h3><i class="bi bi-patch-question"></i> Quizzes</h3>
-        <div id="quizzes">
-            {% for quiz in quizzes %}
-                <div class="quiz-card card mb-3" data-quiz-id="{{ quiz.id }}">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <h5>{{ quiz.question }}</h5>
-                                <small class="text-muted">{{ quiz.timestamp.strftime('%d/%m/%Y %H:%M') }}</small>
+        <div id="quizzes-container" class="scrollable-container" data-min-items="2">
+            <div id="quizzes">
+                {% for quiz in quizzes %}
+                    <div class="quiz-card card mb-3" data-quiz-id="{{ quiz.id }}">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h5>{{ quiz.question }}</h5>
+                                    <small class="text-muted">{{ quiz.timestamp.strftime('%d/%m/%Y %H:%M') }}</small>
+                                    
+                                    <ul class="quiz-options mt-2">
+                                        {% for option in quiz.options %}
+                                            <li class="{% if loop.index0 == quiz.correct_answer %}correct-answer{% endif %}">
+                                                {{ option }}
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
                                 
-                                <ul class="quiz-options mt-2">
-                                    {% for option in quiz.options %}
-                                        <li class="{% if loop.index0 == quiz.correct_answer %}correct-answer{% endif %}">
-                                            {{ option }}
-                                        </li>
-                                    {% endfor %}
-                                </ul>
+                                {% if current_user.id == session.user_id or current_user.role == 'admin' %}
+                                <form method="POST" action="{{ url_for('quizzes.delete_quiz', session_id=session.id, quiz_id=quiz.id) }}">
+                                    <button type="submit" class="btn btn-sm btn-danger" 
+                                            onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce quiz ?')">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
                             </div>
                             
-                            {% if current_user.id == session.user_id or current_user.role == 'admin' %}
-                            <form method="POST" action="{{ url_for('quizzes.delete_quiz', session_id=session.id, quiz_id=quiz.id) }}">
-                                <button type="submit" class="btn btn-sm btn-danger" 
-                                        onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce quiz ?')">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            </form>
-                            {% endif %}
-                        </div>
-                        
-                        <div id="quiz-results-{{ quiz.id }}" class="mt-3">
-                            <div class="spinner-border spinner-border-sm text-primary" role="status">
-                                <span class="visually-hidden">Chargement...</span>
+                            <div id="quiz-results-{{ quiz.id }}" class="mt-3">
+                                <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                    <span class="visually-hidden">Chargement...</span>
+                                </div>
+                                <span class="ms-2">Chargement des résultats...</span>
                             </div>
-                            <span class="ms-2">Chargement des résultats...</span>
-                        </div>
-                        
-                        <div class="mt-2">
-                            <a href="{{ url_for('quizzes.quiz_results', session_id=session.id, quiz_id=quiz.id) }}" 
-                               class="btn btn-sm btn-info">
-                                <i class="bi bi-bar-chart"></i> Résultats détaillés
-                            </a>
+                            
+                            <div class="mt-2">
+                                <a href="{{ url_for('quizzes.quiz_results', session_id=session.id, quiz_id=quiz.id) }}" 
+                                   class="btn btn-sm btn-info">
+                                    <i class="bi bi-bar-chart"></i> Résultats détaillés
+                                </a>
+                            </div>
                         </div>
                     </div>
-                </div>
-            {% endfor %}
+                {% endfor %}
+            </div>
         </div>
     </div>
 </div>
@@ -149,6 +156,9 @@
 <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Initialisation des conteneurs scrollables
+        initScrollableContainers();
+        
         const sessionId = {{ session.id }};
         const socket = io('http://localhost:5000', {
             path: '/socket.io',
@@ -167,78 +177,101 @@
             alert('Erreur de connexion WebSocket: ' + error.message);
         });
 
-    socket.on('new_question', function(data) {
-    // Vérifie si la question existe déjà
-    const existingQuestion = document.querySelector(`.card[data-question-id="${data.question_id}"]`);
-    if (!existingQuestion) {
-        const questionsDiv = document.getElementById('questions');
-        const questionHtml = `
-            <div class="card mb-2" data-question-id="${data.question_id}">
-                <div class="card-body">
-                    <p><strong>Question :</strong> ${data.question_text} 
-                       <small>(${new Date(data.timestamp).toLocaleString()})</small></p>
-                    <form method="POST" class="answer-form">
-                        <input type="hidden" name="question_id" value="${data.question_id}">
-                        <div class="mb-3">
-                            <label for="answer_text_${data.question_id}" class="form-label">Réponse</label>
-                            <textarea class="form-control" name="answer_text" id="answer_text_${data.question_id}"></textarea>
+        socket.on('new_question', function(data) {
+            const existingQuestion = document.querySelector(`.card[data-question-id="${data.question_id}"]`);
+            if (!existingQuestion) {
+                const questionsDiv = document.getElementById('questions');
+                const questionHtml = `
+                    <div class="card mb-2" data-question-id="${data.question_id}">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <p class="mb-1"><strong>Question :</strong> ${data.question_text}</p>
+                                    <small class="text-muted">${new Date(data.timestamp).toLocaleString()}</small>
+                                </div>
+                                <span class="badge bg-warning text-dark">En attente</span>
+                            </div>
+                            <form method="POST" class="answer-form mt-2">
+                                <input type="hidden" name="question_id" value="${data.question_id}">
+                                <div class="mb-2">
+                                    <textarea class="form-control" name="answer_text" placeholder="Votre réponse..." rows="2"></textarea>
+                                </div>
+                                <button type="submit" name="answer" class="btn btn-sm btn-primary">
+                                    <i class="bi bi-send"></i> Répondre
+                                </button>
+                            </form>
                         </div>
-                        <button type="submit" name="answer" class="btn btn-primary">Répondre</button>
-                    </form>
-                </div>
-            </div>
-        `;
-        questionsDiv.insertAdjacentHTML('afterbegin', questionHtml);
-    }
-});
+                    </div>
+                `;
+                questionsDiv.insertAdjacentHTML('afterbegin', questionHtml);
+                updateScrollableContainer('questions-container');
+            }
+        });
 
         socket.on('new_answer', function(data) {
-            const questionElements = document.querySelectorAll('.card[data-question-id="' + data.question_id + '"] .card-body');
+            const questionElements = document.querySelectorAll(`.card[data-question-id="${data.question_id}"] .card-body`);
             questionElements.forEach(element => {
                 const form = element.querySelector('form');
                 if (form) {
                     form.remove();
-                    const answerHtml = `<p><strong>Réponse :</strong> ${data.answer_text}</p>`;
+                    const answerHtml = `
+                        <div class="mt-2 p-2 bg-light rounded">
+                            <p class="mb-0"><strong>Réponse :</strong> ${data.answer_text}</p>
+                        </div>
+                    `;
                     element.insertAdjacentHTML('beforeend', answerHtml);
+                    
+                    // Mettre à jour le badge
+                    const badge = element.querySelector('.badge');
+                    if (badge) badge.remove();
                 }
             });
         });
 
-    socket.on('new_quiz', function(data) {
-    // Vérifie si le quiz existe déjà
-    const existingQuiz = document.querySelector(`.card[data-quiz-id="${data.id}"]`);
-    if (!existingQuiz) {
-        const quizzesDiv = document.getElementById('quizzes');
-        const optionsHtml = data.options.map(opt => `<li>${opt}</li>`).join('');
-        const quizHtml = `
-            <div class="card mb-3" data-quiz-id="${data.id}">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <p><strong>Question :</strong> ${data.question} 
-                               <small>(${new Date(data.timestamp).toLocaleString()})</small></p>
-                            <ul>${optionsHtml}</ul>
-                            <p><strong>Bonne réponse :</strong> ${data.options[data.correct_answer]}</p>
+        socket.on('new_quiz', function(data) {
+            const existingQuiz = document.querySelector(`.card[data-quiz-id="${data.id}"]`);
+            if (!existingQuiz) {
+                const quizzesDiv = document.getElementById('quizzes');
+                const optionsHtml = data.options.map((opt, index) => 
+                    `<li class="${index === data.correct_answer ? 'correct-answer' : ''}">${opt}</li>`
+                ).join('');
+                
+                const quizHtml = `
+                    <div class="quiz-card card mb-3" data-quiz-id="${data.id}">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h5>${data.question}</h5>
+                                    <small class="text-muted">${new Date(data.timestamp).toLocaleString()}</small>
+                                    <ul class="quiz-options mt-2">${optionsHtml}</ul>
+                                </div>
+                                <form method="POST" action="/session/${sessionId}/quiz/${data.id}/delete">
+                                    <button type="submit" class="btn btn-sm btn-danger" 
+                                            onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce quiz ?')">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                            <div id="quiz-results-${data.id}" class="mt-3">
+                                <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                    <span class="visually-hidden">Chargement...</span>
+                                </div>
+                                <span class="ms-2">Chargement des résultats...</span>
+                            </div>
+                            <div class="mt-2">
+                                <a href="/session/${sessionId}/quiz/${data.id}/results" 
+                                   class="btn btn-sm btn-info">
+                                    <i class="bi bi-bar-chart"></i> Résultats détaillés
+                                </a>
+                            </div>
                         </div>
-                        <form method="POST" action="/session/${sessionId}/quiz/${data.id}/delete">
-                            <button type="submit" class="btn btn-sm btn-danger" 
-                                    onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce quiz ?')">
-                                Supprimer
-                            </button>
-                        </form>
                     </div>
-                    <div id="quiz-results-${data.id}">
-                        <p><strong>Résultats :</strong> Chargement...</p>
-                    </div>
-                    <a href="/session/${sessionId}/quiz/${data.id}/results" 
-                       class="btn btn-info btn-sm">Voir les résultats détaillés</a>
-                </div>
-            </div>
-        `;
-        quizzesDiv.insertAdjacentHTML('afterbegin', quizHtml);
-        fetchQuizResults(data.id);
-    }
-});
+                `;
+                quizzesDiv.insertAdjacentHTML('afterbegin', quizHtml);
+                updateScrollableContainer('quizzes-container');
+                fetchQuizResults(data.id);
+            }
+        });
 
         socket.on('new_quiz_response', function(data) {
             fetchQuizResults(data.quiz_id);
@@ -257,11 +290,29 @@
                 .then(data => {
                     const resultsDiv = document.getElementById(`quiz-results-${quizId}`);
                     if (resultsDiv) {
-                        let resultsHtml = '<p><strong>Résultats :</strong></p><ul>';
+                        let resultsHtml = '<div class="quiz-results">';
                         data.results.forEach((count, index) => {
-                            resultsHtml += `<li>${data.options[index]} : ${count} réponses</li>`;
+                            const percentage = data.total_responses > 0 
+                                ? Math.round((count / data.total_responses) * 100) 
+                                : 0;
+                            resultsHtml += `
+                                <div class="result-item mb-1">
+                                    <div class="d-flex justify-content-between">
+                                        <span>${data.options[index]}</span>
+                                        <span>${count} (${percentage}%)</span>
+                                    </div>
+                                    <div class="progress" style="height: 8px;">
+                                        <div class="progress-bar" role="progressbar" 
+                                             style="width: ${percentage}%" 
+                                             aria-valuenow="${percentage}" 
+                                             aria-valuemin="0" 
+                                             aria-valuemax="100">
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
                         });
-                        resultsHtml += '</ul>';
+                        resultsHtml += '</div>';
                         resultsDiv.innerHTML = resultsHtml;
                     }
                 })
@@ -277,6 +328,77 @@
                 fetchQuizResults(quizId);
             });
         }, 5000);
+
+        function initScrollableContainers() {
+            document.querySelectorAll('.scrollable-container').forEach(container => {
+                const minItems = parseInt(container.getAttribute('data-min-items')) || 3;
+                const items = container.querySelectorAll('.card').length;
+                
+                if (items >= minItems) {
+                    container.style.maxHeight = '500px';
+                    container.style.overflowY = 'auto';
+                    container.style.paddingRight = '10px';
+                }
+            });
+        }
+
+        function updateScrollableContainer(containerId) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            
+            const minItems = parseInt(container.getAttribute('data-min-items')) || 3;
+            const items = container.querySelectorAll('.card').length;
+            
+            if (items >= minItems) {
+                container.style.maxHeight = '500px';
+                container.style.overflowY = 'auto';
+            } else {
+                container.style.maxHeight = '';
+                container.style.overflowY = '';
+            }
+        }
     });
 </script>
+
+<style>
+    /* Ajouts pour les conteneurs scrollables */
+    .scrollable-container {
+        transition: all 0.3s ease;
+    }
+    
+    .scrollable-container::-webkit-scrollbar {
+        width: 8px;
+    }
+    
+    .scrollable-container::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+    
+    .scrollable-container::-webkit-scrollbar-thumb {
+        background: var(--primary-color);
+        border-radius: 10px;
+    }
+    
+    .scrollable-container::-webkit-scrollbar-thumb:hover {
+        background: var(--dark-green);
+    }
+    
+    /* Amélioration des résultats de quiz */
+    .quiz-results {
+        margin-top: 10px;
+    }
+    
+    .result-item {
+        font-size: 0.9rem;
+    }
+    
+    .progress {
+        background-color: #e9ecef;
+    }
+    
+    .progress-bar {
+        background-color: var(--primary-color);
+    }
+</style>
 {% endblock %}
