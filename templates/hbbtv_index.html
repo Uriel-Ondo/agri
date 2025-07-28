@@ -67,14 +67,14 @@
         }
 
         function disableQuizOptions() {
-            const options = document.querySelectorAll('#quiz-options li');
-            options.forEach(option => {
-                option.style.pointerEvents = 'none';
-                option.style.opacity = '0.6';
-                option.style.cursor = 'not-allowed';
-            });
-        }
-
+        const options = document.querySelectorAll('#quiz-options li');
+        options.forEach(option => {
+            option.style.pointerEvents = 'none';
+            option.style.cursor = 'not-allowed';
+            // Conserver l'opacité à 1 pour garder les couleurs visibles
+            option.style.opacity = '1'; 
+        });
+    }
         function enableQuizOptions() {
             const options = document.querySelectorAll('#quiz-options li');
             options.forEach(option => {
@@ -85,49 +85,63 @@
         }
 
         function sendQuizResponse(quizId, selectedOption) {
-            const deviceId = getDeviceId();
-            
-            // Vérification locale immédiate
-            if (checkQuizHistory(quizId)) {
-                document.getElementById('response').innerText = 'Vous avez déjà répondu à ce quiz';
-                return;
-            }
-
-            // Désactiver les options pendant l'envoi
-            disableQuizOptions();
-            document.getElementById('response').innerText = 'Envoi en cours...';
-
-            fetch(`${backendUrl}/session/${sessionId}/quiz/${quizId}/respond`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    device_id: deviceId,  // Envoi du device_id
-                    selected_option: selectedOption
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    // Mettre à jour l'historique local
-                    const quizHistory = JSON.parse(localStorage.getItem('quizHistory') || '{}');
-                    quizHistory[quizId] = true;
-                    localStorage.setItem('quizHistory', JSON.stringify(quizHistory));
-                    
-                    document.getElementById('response').innerText = 'Merci pour votre réponse !';
-                    disableQuizOptions();
-                } else {
-                    document.getElementById('response').innerText = 'Erreur: ' + (data.message || 'Réponse non enregistrée');
-                    enableQuizOptions();
-                }
-            })
-            .catch(error => {
-                console.error('Erreur:', error);
-                document.getElementById('response').innerText = 'Erreur de connexion au serveur';
-                enableQuizOptions();
-            });
+        const deviceId = getDeviceId();
+        
+        // Vérification locale immédiate
+        if (checkQuizHistory(quizId)) {
+            document.getElementById('response').innerText = 'Vous avez déjà répondu à ce quiz';
+            return;
         }
+
+        // Désactiver les options pendant l'envoi
+        disableQuizOptions();
+        document.getElementById('response').innerText = 'Envoi en cours...';
+
+        fetch(`${backendUrl}/session/${sessionId}/quiz/${quizId}/respond`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                device_id: deviceId,
+                selected_option: selectedOption
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                // Mettre à jour l'historique local
+                const quizHistory = JSON.parse(localStorage.getItem('quizHistory') || '{}');
+                quizHistory[quizId] = true;
+                localStorage.setItem('quizHistory', JSON.stringify(quizHistory));
+                
+                const options = document.querySelectorAll('#quiz-options li');
+                const correctIndex = data.correct_answer;
+                
+                // Afficher la réponse correcte en vert
+                options[correctIndex].classList.add('correct-answer');
+                
+                if (data.is_correct) {
+                    document.getElementById('response').innerText = 'Bravo ! C\'est la bonne réponse.';
+                    // Mettre en évidence la réponse choisie (qui est correcte)
+                    options[selectedOption].classList.add('selected-correct');
+                } else {
+                    document.getElementById('response').innerText = 'Mauvaise réponse. La bonne réponse est mise en évidence.';
+                    // Mettre en évidence la réponse choisie (qui est incorrecte)
+                    options[selectedOption].classList.add('selected-incorrect');
+                }
+            } else {
+                document.getElementById('response').innerText = 'Erreur: ' + (data.message || 'Réponse non enregistrée');
+                enableQuizOptions();
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            document.getElementById('response').innerText = 'Erreur de connexion au serveur';
+            enableQuizOptions();
+        });
+    }
+
         function initVideoPlayer() {
             const videoPlayer = document.getElementById('video-player');
             if (Hls.isSupported()) {
@@ -327,15 +341,19 @@
                                 li.innerText = option;
                                 li.tabIndex = 0;
                                 
-                                if (!alreadyAnswered) {
+                                // Appliquer les styles si déjà répondu
+                                if (alreadyAnswered) {
+                                    li.style.pointerEvents = 'none';
+                                    li.style.cursor = 'not-allowed';
+                                    
+                                    if (index === quiz.correct_answer) {
+                                        li.classList.add('correct-answer');
+                                    }
+                                } else {
                                     li.onclick = () => sendQuizResponse(quiz.id, index);
                                     li.onkeypress = (e) => {
                                         if (e.key === 'Enter') sendQuizResponse(quiz.id, index);
                                     };
-                                } else {
-                                    li.style.pointerEvents = 'none';
-                                    li.style.opacity = '0.6';
-                                    li.style.cursor = 'not-allowed';
                                 }
                                 
                                 optionsList.appendChild(li);

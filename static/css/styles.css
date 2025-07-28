@@ -247,3 +247,19 @@ body {
         padding: 8px;
     }
 }
+
+/* Dans la balise <style> ou dans votre fichier CSS */
+.correct-answer {
+    background-color: #4CAF50 !important; /* Vert pour la bonne réponse */
+    color: white !important;
+    font-weight: bold;
+}
+
+.selected-correct {
+    border: 3px solid #2E7D32 !important; /* Bordure verte épaisse */
+}
+
+.selected-incorrect {
+    border: 3px solid #f44336 !important; /* Bordure rouge pour mauvaise réponse */
+    background-color: #ffebee !important; /* Fond rouge clair */
+}

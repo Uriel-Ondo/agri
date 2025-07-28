@@ -99,6 +99,9 @@ def respond_quiz(session_id, quiz_id):
         if not device_id:
             return jsonify({'status': 'error', 'message': 'ID d\'appareil manquant'}), 400
         
+        # Récupérer le quiz pour vérifier la réponse
+        quiz = Quiz.query.get_or_404(quiz_id)
+        
         # Vérifier si cet appareil a déjà répondu à ce quiz
         existing_response = QuizResponse.query.filter_by(
             quiz_id=quiz_id,
@@ -114,7 +117,7 @@ def respond_quiz(session_id, quiz_id):
         # Enregistrer la nouvelle réponse
         response = QuizResponse(
             quiz_id=quiz_id,
-            device_id=device_id,  # Utilisation du device_id
+            device_id=device_id,
             selected_option=selected_option,
             timestamp=datetime.now()
         )
@@ -127,7 +130,14 @@ def respond_quiz(session_id, quiz_id):
             'selected_option': selected_option
         }, room=f'session_{session_id}')
         
-        return jsonify({'status': 'success'})
+        # Vérifier si la réponse est correcte
+        is_correct = (selected_option == quiz.correct_answer)
+        
+        return jsonify({
+            'status': 'success',
+            'is_correct': is_correct,
+            'correct_answer': quiz.correct_answer
+        })
     
     except Exception as e:
         logger.error(f"Erreur lors de l'enregistrement de la réponse: {str(e)}")
