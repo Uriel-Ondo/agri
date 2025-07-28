@@ -284,42 +284,60 @@
             }
         });
 
-        function fetchQuizResults(quizId) {
-            fetch(`/api/session/${sessionId}/quiz/${quizId}/results`)
-                .then(response => response.json())
-                .then(data => {
-                    const resultsDiv = document.getElementById(`quiz-results-${quizId}`);
-                    if (resultsDiv) {
-                        let resultsHtml = '<div class="quiz-results">';
+      function fetchQuizResults(quizId) {
+        fetch(`/api/session/${sessionId}/quiz/${quizId}/results`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Erreur de chargement des résultats');
+                }
+                return response.json();
+            })
+            .then(data => {
+                const resultsDiv = document.getElementById(`quiz-results-${quizId}`);
+                if (resultsDiv) {
+                    let resultsHtml = '<div class="quiz-results">';
+                    
+                    if (data.results && Array.isArray(data.results)) {
                         data.results.forEach((count, index) => {
                             const percentage = data.total_responses > 0 
                                 ? Math.round((count / data.total_responses) * 100) 
                                 : 0;
                             resultsHtml += `
-                                <div class="result-item mb-1">
-                                    <div class="d-flex justify-content-between">
-                                        <span>${data.options[index]}</span>
-                                        <span>${count} (${percentage}%)</span>
+                                <div class="result-item mb-2">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="option-text">${data.options[index]}</span>
+                                        <span class="option-stats">
+                                            <span class="option-count">${count}</span>
+                                            <span class="option-percentage">(${percentage}%)</span>
+                                        </span>
                                     </div>
-                                    <div class="progress" style="height: 8px;">
+                                    <div class="progress mt-1" style="height: 8px;">
                                         <div class="progress-bar" role="progressbar" 
-                                             style="width: ${percentage}%" 
-                                             aria-valuenow="${percentage}" 
-                                             aria-valuemin="0" 
-                                             aria-valuemax="100">
+                                            style="width: ${percentage}%" 
+                                            aria-valuenow="${percentage}" 
+                                            aria-valuemin="0" 
+                                            aria-valuemax="100">
                                         </div>
                                     </div>
                                 </div>
                             `;
                         });
-                        resultsHtml += '</div>';
-                        resultsDiv.innerHTML = resultsHtml;
+                    } else {
+                        resultsHtml += '<div class="text-danger">Aucun résultat disponible</div>';
                     }
-                })
-                .catch(error => {
-                    console.error('Erreur lors de la récupération des résultats:', error);
-                });
-        }
+                    
+                    resultsHtml += '</div>';
+                    resultsDiv.innerHTML = resultsHtml;
+                }
+            })
+            .catch(error => {
+                console.error('Erreur lors de la récupération des résultats:', error);
+                const resultsDiv = document.getElementById(`quiz-results-${quizId}`);
+                if (resultsDiv) {
+                    resultsDiv.innerHTML = `<div class="text-danger">Erreur de chargement des résultats</div>`;
+                }
+            });
+    }
 
         // Mettre à jour périodiquement les résultats des quizzes
         setInterval(() => {

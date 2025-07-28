@@ -426,3 +426,41 @@ h1, h2, h3, h4, h5, h6 {
 .registration-card .card-body {
     padding: 2rem;
 }
+
+/* Style pour les résultats de quiz */
+.quiz-results {
+    margin-top: 10px;
+    font-size: 0.9rem;
+}
+
+.option-text {
+    margin-right: 8px;
+}
+
+.option-stats {
+    display: flex;
+    gap: 8px; /* Espace entre les éléments */
+}
+
+.option-count {
+    font-weight: bold;
+    margin-right: 4px;
+}
+
+.option-percentage {
+    color: #6c757d; /* Couleur grise pour le pourcentage */
+}
+
+.result-item {
+    margin-bottom: 12px;
+}
+
+.progress {
+    background-color: #e9ecef;
+    border-radius: 4px;
+}
+
+.progress-bar {
+    background-color: var(--primary-color);
+    transition: width 0.6s ease;
+}

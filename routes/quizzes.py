@@ -166,3 +166,31 @@ def quiz_results(session_id, quiz_id):
         session_id=session_id,
         total_responses=sum(results_dict.values())
     )
+
+@quizzes_bp.route('/api/session/<int:session_id>/quiz/<int:quiz_id>/results')
+def api_quiz_results(session_id, quiz_id):
+    quiz = Quiz.query.get_or_404(quiz_id)
+    
+    # Compter les réponses par option
+    results = db.session.query(
+        QuizResponse.selected_option,
+        func.count(QuizResponse.id).label('count')
+    ).filter_by(quiz_id=quiz_id).group_by(QuizResponse.selected_option).all()
+    
+    # Convertir en format facile à utiliser
+    results_dict = {opt: 0 for opt in range(len(quiz.options))}
+    for r in results:
+        results_dict[r.selected_option] = r.count
+    
+    total_responses = sum(results_dict.values())
+    
+    # Préparer les données pour le JSON
+    response_data = {
+        'quiz_id': quiz_id,
+        'question': quiz.question,
+        'options': quiz.options,
+        'results': [results_dict.get(i, 0) for i in range(len(quiz.options))],
+        'total_responses': total_responses
+    }
+    
+    return jsonify(response_data)
