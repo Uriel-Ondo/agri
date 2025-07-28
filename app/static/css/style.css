@@ -826,6 +826,59 @@ body::after {
     z-index: 999;
 }
 
+/* Styles pour les zones scrollables */
+.session-scrollable {
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 10px;
+}
+
+.questions-scrollable {
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 10px;
+}
+
+.quizzes-scrollable {
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 10px;
+}
+
+/* Personnalisation des accordions */
+.accordion-button {
+    background-color: #f8f9fa;
+    color: #005555;
+    font-weight: 500;
+}
+
+.accordion-button:not(.collapsed) {
+    background-color: #e0f7fa;
+    color: #003838;
+}
+
+.accordion-button:focus {
+    box-shadow: none;
+    border-color: #005555;
+}
+
+.accordion-button::after {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23005555'%3e%3cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3e%3c/svg%3e");
+}
+
+.accordion-button:not(.collapsed)::after {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23003838'%3e%3cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3e%3c/svg%3e");
+}
+
+/* Styles pour les graphiques */
+#quiz-results-container {
+    margin-top: 1rem;
+    max-width: 100%;
+}
+canvas {
+    max-width: 100%;
+}
+
 /* Responsive */
 @media (max-width: 1200px) {
     .sidebar { width: 180px; } 

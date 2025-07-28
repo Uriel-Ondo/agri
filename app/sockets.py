@@ -23,7 +23,7 @@ def register_handlers(socketio, redis_client, db):
                     'question_text': question.question_text,
                     'answer_text': question.answer_text,
                     'timestamp': question.timestamp.isoformat()
-                }, room=request.sid)
+                }, to=request.sid)
             
             quizzes = Quiz.query.filter_by(session_id=session_id).order_by(Quiz.timestamp.desc()).all()
             for quiz in quizzes:
@@ -33,7 +33,7 @@ def register_handlers(socketio, redis_client, db):
                     'question': quiz.question,
                     'options': quiz.options,
                     'timestamp': quiz.timestamp.isoformat()
-                }, room=request.sid)
+                }, to=request.sid)
 
     @socketio.on('leave_session')
     def handle_leave_session(data):
@@ -77,8 +77,24 @@ def register_handlers(socketio, redis_client, db):
         db.session.commit()
         if redis_client:
             redis_client.rpush(f"session:{session_id}:quiz_responses", f"Q:{quiz_id}|A:{selected_option}")
+        quiz = Quiz.query.get(quiz_id)
         emit('new_quiz_response', {
             'session_id': session_id,
             'quiz_id': quiz_id,
-            'selected_option': selected_option
+            'selected_option': selected_option,
+            'correct_option': quiz.correct_answer
         }, room=f'session_{session_id}')
+
+    @socketio.on('request_quiz_result')
+    def handle_request_quiz_result(data):
+        quiz_id = data['quiz_id']
+        quiz = Quiz.query.get(quiz_id)
+        if quiz:
+            # Supposer que la dernière réponse du client est utilisée
+            response = QuizResponse.query.filter_by(quiz_id=quiz_id).order_by(QuizResponse.timestamp.desc()).first()
+            selected_option = response.selected_option if response else null
+            emit('quiz_result', {
+                'quiz_id': quiz_id,
+                'correct_option': quiz.correct_answer,
+                'selected_option': selected_option
+            }, to=request.sid)

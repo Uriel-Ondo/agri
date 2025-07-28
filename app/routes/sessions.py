@@ -82,7 +82,7 @@ def manage_session(session_id):
                 
                 question = Question.query.filter_by(
                     id=question_id,
-                    session_id=session_id  # Vérification cruciale
+                    session_id=session_id
                 ).first_or_404()
                 
                 question.answer_text = answer_text
@@ -90,7 +90,7 @@ def manage_session(session_id):
                 
                 if redis_client:
                     redis_client.rpush(
-                        f"session:{session_id}:questions", 
+                        f"session:{session_id}:questions",
                         f"Q:{question.question_text}|A:{answer_text}"
                     )
                 
@@ -105,7 +105,6 @@ def manage_session(session_id):
                 flash('Réponse enregistrée avec succès !', 'success')
                 
             elif 'delete_session' in request.form:
-                # Suppression en cascade des questions et quizzes associés
                 Question.query.filter_by(session_id=session_id).delete()
                 Quiz.query.filter_by(session_id=session_id).delete()
                 db.session.delete(session)
@@ -134,6 +133,54 @@ def manage_session(session_id):
         rtmp_port=current_app.config['SRS_RTMP_PORT']
     )
 
+@sessions_bp.route('/api/session/<int:session_id>/answer', methods=['POST'])
+@login_required
+def answer_question(session_id):
+    if not current_user.is_authenticated:
+        return jsonify({'error': 'Utilisateur non authentifié'}), 401
+
+    session = Session.query.get_or_404(session_id)
+    if current_user.id != session.user_id and current_user.role != 'admin':
+        return jsonify({'error': 'Non autorisé'}), 403
+
+    question_id = request.form.get('question_id')
+    answer_text = request.form.get('answer_text')
+    if not question_id or not answer_text:
+        return jsonify({'error': 'Données manquantes'}), 400
+
+    question = Question.query.filter_by(
+        id=question_id,
+        session_id=session_id
+    ).first_or_404()
+
+    try:
+        question.answer_text = answer_text
+        db.session.commit()
+
+        if redis_client:
+            redis_client.rpush(
+                f"session:{session_id}:questions",
+                f"Q:{question.question_text}|A:{answer_text}"
+            )
+
+        socketio.emit('new_answer', {
+            'session_id': session_id,
+            'question_id': question.id,
+            'question_text': question.question_text,
+            'answer_text': answer_text,
+            'timestamp': question.timestamp.isoformat()
+        }, room=f'session_{session_id}')
+
+        return jsonify({
+            'success': True,
+            'question_id': question_id,
+            'answer_text': answer_text
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Erreur lors de la soumission: {str(e)}'}), 500
+
 @sessions_bp.route('/session/<int:session_id>/delete', methods=['POST'])
 @login_required
 def delete_session(session_id):
@@ -145,7 +192,6 @@ def delete_session(session_id):
     
     try:
         with db.session.begin():
-            # Suppression en cascade
             Question.query.filter_by(session_id=session_id).delete()
             Quiz.query.filter_by(session_id=session_id).delete()
             db.session.delete(session)

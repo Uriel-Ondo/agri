@@ -41,7 +41,6 @@ def create_quiz(session_id):
         db.session.add(quiz)
         db.session.commit()
         
-        # Utilisation correcte de current_app
         if hasattr(current_app, 'redis_client') and current_app.redis_client:
             current_app.redis_client.publish(f"session:{session_id}:quizzes", json.dumps({
                 'id': quiz.id,
@@ -76,6 +75,10 @@ def delete_quiz(session_id, quiz_id):
         QuizResponse.query.filter_by(quiz_id=quiz_id).delete()
         db.session.delete(quiz)
         db.session.commit()
+        socketio.emit('quiz_deleted', {
+            'session_id': session_id,
+            'quiz_id': quiz_id
+        }, room=f'session_{session_id}')
         flash('Quiz supprimé avec succès', 'success')
     except Exception as e:
         db.session.rollback()
@@ -98,7 +101,8 @@ def respond_quiz(session_id, quiz_id):
     socketio.emit('new_quiz_response', {
         'session_id': session_id,
         'quiz_id': quiz_id,
-        'selected_option': selected_option
+        'selected_option': selected_option,
+        'correct_option': Quiz.query.get(quiz_id).correct_answer
     }, room=f'session_{session_id}')
     return jsonify({'status': 'success'})
 
@@ -106,8 +110,37 @@ def respond_quiz(session_id, quiz_id):
 @login_required
 def quiz_results(session_id, quiz_id):
     quiz = Quiz.query.get_or_404(quiz_id)
+    session = Session.query.get_or_404(session_id)
+    
+    if current_user.id != session.user_id and current_user.role != 'admin':
+        flash('Action non autorisée', 'danger')
+        return redirect(url_for('sessions.manage_session', session_id=session_id))
+    
     responses = QuizResponse.query.filter_by(quiz_id=quiz_id).all()
     results = [0] * len(quiz.options)
     for response in responses:
         results[response.selected_option] += 1
     return render_template('quiz_results.html', quiz=quiz, results=results, session_id=session_id)
+
+@quizzes_bp.route('/api/session/<int:session_id>/quiz/<int:quiz_id>/results', methods=['GET'])
+@login_required
+def api_quiz_results(session_id, quiz_id):
+    quiz = Quiz.query.get_or_404(quiz_id)
+    session = Session.query.get_or_404(session_id)
+    
+    if current_user.id != session.user_id and current_user.role != 'admin':
+        return jsonify({'error': 'Action non autorisée'}), 403
+    
+    responses = QuizResponse.query.filter_by(quiz_id=quiz_id).all()
+    results = [0] * len(quiz.options)
+    for response in responses:
+        results[response.selected_option] += 1
+    
+    return jsonify({
+        'quiz_id': quiz_id,
+        'session_id': session_id,
+        'question': quiz.question,
+        'options': quiz.options,
+        'results': results,
+        'correct_option': quiz.correct_answer
+    })

@@ -26,7 +26,6 @@
                 </div>
             </div>
         </div>
-
         <!-- Colonne centrale - Vidéo -->
         <div class="center-column">
             <div id="video-container" class="card card-float">
@@ -42,7 +41,6 @@
                 </div>
             </div>
         </div>
-
         <!-- Colonne de droite - Questions/Réponses -->
         <div class="right-column">
             <div id="question-form" class="card card-float">
@@ -59,7 +57,7 @@
             </div>
             <div id="questions-container" class="card card-float">
                 <div class="card-header">
-                    <h2><i class="fa-solid fa-comments"></i> Questions des patients</h2>
+                    <h2><i class="fa-solid fa-comments"></i> Questions des spectateurs</h2>
                 </div>
                 <div class="card-body questions-list" id="questions-list">
                     <!-- Questions insérées via JavaScript -->
@@ -67,16 +65,37 @@
             </div>
         </div>
     </div>
-
     <div id="response" class="response-message"></div>
-
     <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.15/dist/hls.min.js"></script>
     <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
     <script>
         let videoSystem = null;
         let sessionId = null;
         let currentQuizId = null;
+        let hasAnswered = false; // Suivi de la réponse de l'utilisateur
         const backendUrl = 'http://localhost:5001';
+
+        // Fonction pour vérifier si un quiz a déjà été répondu
+        function hasQuizBeenAnswered(quizId) {
+            const answeredQuizzes = JSON.parse(localStorage.getItem('answeredQuizzes') || '[]');
+            return answeredQuizzes.includes(quizId);
+        }
+
+        // Fonction pour marquer un quiz comme répondu
+        function markQuizAsAnswered(quizId) {
+            const answeredQuizzes = JSON.parse(localStorage.getItem('answeredQuizzes') || '[]');
+            if (!answeredQuizzes.includes(quizId)) {
+                answeredQuizzes.push(quizId);
+                localStorage.setItem('answeredQuizzes', JSON.stringify(answeredQuizzes));
+            }
+        }
+
+        // Fonction pour supprimer un quiz de la liste des quizzes répondus
+        function removeQuizFromAnswered(quizId) {
+            const answeredQuizzes = JSON.parse(localStorage.getItem('answeredQuizzes') || '[]');
+            const updatedQuizzes = answeredQuizzes.filter(id => id !== quizId);
+            localStorage.setItem('answeredQuizzes', JSON.stringify(updatedQuizzes));
+        }
 
         function initVideoPlayer() {
             const videoPlayer = document.getElementById('video-player');
@@ -208,45 +227,83 @@
             });
 
             socket.on('new_quiz', (data) => {
+                hasAnswered = hasQuizBeenAnswered(data.id);
                 document.getElementById('quiz-question').innerText = data.question;
                 const optionsList = document.getElementById('quiz-options');
                 optionsList.innerHTML = '';
                 data.options.forEach((option, index) => {
                     const li = document.createElement('li');
                     li.innerText = option;
-                    li.tabIndex = 0;
-                    li.className = 'quiz-option';
-                    li.onclick = () => sendQuizResponse(data.id, index);
-                    li.onkeypress = (e) => {
-                        if (e.key === 'Enter') sendQuizResponse(data.id, index);
-                    };
+                    li.tabIndex = hasAnswered ? -1 : 0;
+                    li.className = 'quiz-option' + (hasAnswered ? ' disabled' : '');
+                    li.dataset.index = index;
+                    if (!hasAnswered) {
+                        li.onclick = () => sendQuizResponse(data.id, index);
+                        li.onkeypress = (e) => {
+                            if (e.key === 'Enter') sendQuizResponse(data.id, index);
+                        };
+                    }
                     optionsList.appendChild(li);
                 });
                 currentQuizId = data.id;
+                // Si déjà répondu, demander le résultat
+                if (hasAnswered) {
+                    socket.emit('request_quiz_result', { quiz_id: data.id });
+                }
             });
 
-            socket.on('session_status_changed', (data) => {
-                if (data.status === 'live') {
-                    fetch(`${backendUrl}/api/sessions/current`)
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data && data.id) {
-                                sessionId = data.id;
-                                socket.emit('join_session', { session_id: sessionId });
-                                if (videoSystem) {
-                                    loadHlsVideo(data.hls_url, videoSystem);
-                                }
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Erreur lors de la récupération de la session:', error);
-                            document.getElementById('response').innerText = 'Erreur lors de la récupération de la session';
-                        });
-                } else if (data.status === 'ended') {
-                    document.getElementById('response').innerText = 'La session a été terminée';
-                    if (videoSystem && videoSystem.hls) {
-                        videoSystem.hls.destroy();
-                    }
+            socket.on('new_quiz_response', (data) => {
+                if (data.quiz_id === currentQuizId && hasAnswered) {
+                    const optionsList = document.getElementById('quiz-options');
+                    const options = optionsList.querySelectorAll('.quiz-option');
+                    options.forEach(option => {
+                        const index = parseInt(option.dataset.index);
+                        if (index === data.correct_option) {
+                            option.classList.add('correct');
+                            option.innerHTML = `<i class="fa-solid fa-check"></i> ${option.innerText}`;
+                        } else if (index === data.selected_option) {
+                            option.classList.add('incorrect');
+                            option.innerHTML = `<i class="fa-solid fa-times"></i> ${option.innerText}`;
+                        }
+                        option.classList.add('disabled');
+                        option.tabIndex = -1;
+                        option.onclick = null;
+                        option.onkeypress = null;
+                    });
+                    document.getElementById('response').innerText = 'Résultat affiché !';
+                }
+            });
+
+            socket.on('quiz_deleted', (data) => {
+                if (data.quiz_id === currentQuizId) {
+                    document.getElementById('quiz-question').innerText = '';
+                    document.getElementById('quiz-options').innerHTML = '';
+                    document.getElementById('response').innerText = 'Quiz supprimé';
+                    hasAnswered = false;
+                    currentQuizId = null;
+                    removeQuizFromAnswered(data.quiz_id);
+                }
+            });
+
+            socket.on('quiz_result', (data) => {
+                if (data.quiz_id === currentQuizId) {
+                    const optionsList = document.getElementById('quiz-options');
+                    const options = optionsList.querySelectorAll('.quiz-option');
+                    options.forEach(option => {
+                        const index = parseInt(option.dataset.index);
+                        if (index === data.correct_option) {
+                            option.classList.add('correct');
+                            option.innerHTML = `<i class="fa-solid fa-check"></i> ${option.innerText}`;
+                        } else if (index === data.selected_option) {
+                            option.classList.add('incorrect');
+                            option.innerHTML = `<i class="fa-solid fa-times"></i> ${option.innerText}`;
+                        }
+                        option.classList.add('disabled');
+                        option.tabIndex = -1;
+                        option.onclick = null;
+                        option.onkeypress = null;
+                    });
+                    document.getElementById('response').innerText = 'Résultat affiché !';
                 }
             });
 
@@ -312,21 +369,28 @@
                     .then(quizzes => {
                         if (quizzes.length > 0) {
                             const quiz = quizzes[quizzes.length - 1];
+                            hasAnswered = hasQuizBeenAnswered(quiz.id);
                             document.getElementById('quiz-question').innerText = quiz.question;
                             const optionsList = document.getElementById('quiz-options');
                             optionsList.innerHTML = '';
                             quiz.options.forEach((option, index) => {
                                 const li = document.createElement('li');
                                 li.innerText = option;
-                                li.tabIndex = 0;
-                                li.className = 'quiz-option';
-                                li.onclick = () => sendQuizResponse(quiz.id, index);
-                                li.onkeypress = (e) => {
-                                    if (e.key === 'Enter') sendQuizResponse(quiz.id, index);
-                                };
+                                li.tabIndex = hasAnswered ? -1 : 0;
+                                li.className = 'quiz-option' + (hasAnswered ? ' disabled' : '');
+                                li.dataset.index = index;
+                                if (!hasAnswered) {
+                                    li.onclick = () => sendQuizResponse(quiz.id, index);
+                                    li.onkeypress = (e) => {
+                                        if (e.key === 'Enter') sendQuizResponse(quiz.id, index);
+                                    };
+                                }
                                 optionsList.appendChild(li);
                             });
                             currentQuizId = quiz.id;
+                            if (hasAnswered) {
+                                socket.emit('request_quiz_result', { quiz_id: quiz.id });
+                            }
                         } else {
                             document.getElementById('response').innerText = 'Aucun quiz disponible';
                         }
@@ -338,13 +402,17 @@
             }
 
             function sendQuizResponse(quizId, selectedOption) {
-                if (sessionId) {
+                if (sessionId && !hasAnswered) {
                     socket.emit('quiz_response', {
                         session_id: sessionId,
                         quiz_id: quizId,
                         selected_option: selectedOption
                     });
+                    hasAnswered = true;
+                    markQuizAsAnswered(quizId);
                     document.getElementById('response').innerText = 'Réponse envoyée !';
+                } else if (hasAnswered) {
+                    document.getElementById('response').innerText = 'Vous avez déjà répondu à ce quiz !';
                 }
             }
 
@@ -359,10 +427,12 @@
                         sendQuestion();
                         break;
                     case 'Green':
-                        const focusedOption = document.activeElement;
-                        if (focusedOption && focusedOption.classList.contains('quiz-option')) {
-                            const index = Array.from(focusedOption.parentElement.children).indexOf(focusedOption);
-                            sendQuizResponse(currentQuizId, index);
+                        if (!hasAnswered) {
+                            const focusedOption = document.activeElement;
+                            if (focusedOption && focusedOption.classList.contains('quiz-option')) {
+                                const index = Array.from(focusedOption.parentElement.children).indexOf(focusedOption);
+                                sendQuizResponse(currentQuizId, index);
+                            }
                         }
                         break;
                     case 'Blue':
