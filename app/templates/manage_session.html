@@ -322,6 +322,15 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    socket.on('session_time_warning', function(data) {
+        alert(data.message);
+    });
+
+    socket.on('session_ended_auto', function(data) {
+        alert(`${data.message} Veuillez créer une nouvelle session pour continuer à diffuser.`);
+        window.location.href = '{{ url_for('sessions.create_session') }}';
+    });
+
     function fetchQuizResults(quizId) {
         fetch(`/api/session/${sessionId}/quiz/${quizId}/results`)
             .then(response => {
@@ -430,6 +439,19 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    // Vérifier le temps restant toutes les 30 secondes
+    function checkSessionTime() {
+        fetch(`/api/session/${sessionId}/time_remaining`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'ended') {
+                    clearInterval(sessionTimeInterval);
+                }
+            })
+            .catch(error => console.error('Erreur lors de la vérification du temps restant:', error));
+    }
+    const sessionTimeInterval = setInterval(checkSessionTime, 30000);
+
     // Validation du formulaire de réponse
     function validateAnswerForm(form) {
         const textarea = form.querySelector('textarea[name="answer_text"]');
@@ -461,7 +483,6 @@ document.addEventListener('DOMContentLoaded', function() {
             return response.json();
         })
         .then(data => {
-            // Mettre à jour le DOM localement
             const questionElements = document.querySelectorAll(`.question-slide[data-question-id="${questionId}"] .card-body`);
             questionElements.forEach(element => {
                 const form = element.querySelector('form');
@@ -473,7 +494,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (badge) badge.remove();
                 }
             });
-            // Émettre l'événement WebSocket pour les autres clients
             socket.emit('new_answer', {
                 session_id: sessionId,
                 question_id: questionId,

@@ -1,9 +1,9 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app
+from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, jsonify
 from flask_login import login_required, current_user
 from extensions import db, socketio, redis_client
 from app.models import Session, Question, Quiz
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 
 sessions_bp = Blueprint('sessions', __name__)
@@ -17,7 +17,12 @@ def create_session():
             description = request.form.get('description', '')
             start_time = datetime.strptime(request.form['start_time'], '%Y-%m-%dT%H:%M')
             end_time = datetime.strptime(request.form['end_time'], '%Y-%m-%dT%H:%M')
-            
+            current_time = datetime.now()
+
+            if start_time <= current_time:
+                flash("La date de début doit être dans le futur", 'danger')
+                return redirect(url_for('sessions.create_session'))
+                
             if end_time <= start_time:
                 flash("La date de fin doit être après la date de début", 'danger')
                 return redirect(url_for('sessions.create_session'))
@@ -59,6 +64,11 @@ def manage_session(session_id):
     if request.method == 'POST':
         try:
             if 'start' in request.form:
+                active_session = Session.query.filter_by(status='live').first()
+                if active_session and active_session.id != session_id:
+                    flash("Une autre session est déjà en cours. Veuillez arrêter la session en cours avant d'en démarrer une nouvelle.", 'danger')
+                    return redirect(url_for('sessions.manage_session', session_id=session_id))
+                    
                 session.status = 'live'
                 db.session.commit()
                 socketio.emit('session_status_changed', {
@@ -180,6 +190,34 @@ def answer_question(session_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': f'Erreur lors de la soumission: {str(e)}'}), 500
+
+@sessions_bp.route('/api/session/<int:session_id>/time_remaining', methods=['GET'])
+@login_required
+def time_remaining(session_id):
+    session = Session.query.get_or_404(session_id)
+    if current_user.id != session.user_id and current_user.role != 'admin':
+        return jsonify({'error': 'Non autorisé'}), 403
+
+    current_time = datetime.now()
+    time_left = (session.end_time - current_time).total_seconds()
+    
+    if time_left <= 0:
+        if session.status == 'live':
+            session.status = 'ended'
+            db.session.commit()
+            socketio.emit('session_ended_auto', {
+                'session_id': session_id,
+                'message': 'La session a atteint sa date de fin et a été arrêtée automatiquement.'
+            }, room=f'session_{session_id}')
+        return jsonify({'time_left': 0, 'status': session.status})
+
+    if time_left <= 300 and session.status == 'live':
+        socketio.emit('session_time_warning', {
+            'session_id': session_id,
+            'message': 'Il reste moins de 5 minutes avant la fin de la session.'
+        }, room=f'session_{session_id}')
+
+    return jsonify({'time_left': max(0, time_left), 'status': session.status})
 
 @sessions_bp.route('/session/<int:session_id>/delete', methods=['POST'])
 @login_required
