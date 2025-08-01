@@ -6,6 +6,10 @@ from models import User
 from routes import auth_bp, admin_bp, sessions_bp, quizzes_bp, main_bp
 from api import namespaces
 import sockets
+# Ajout: Initialiser le scheduler pour les sessions
+from apscheduler.schedulers.background import BackgroundScheduler
+from routes.sessions import check_expired_sessions
+
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -48,6 +52,18 @@ sockets.register_handlers(socketio, redis_client, db)
 def load_user(user_id):
     return db.session.get(User, int(user_id))
 
+
+if not hasattr(app, 'scheduler'):
+    app.scheduler = BackgroundScheduler()
+    app.scheduler.start()
+    app.scheduler.add_job(
+        func=check_expired_sessions,
+        trigger='interval',
+        minutes=1,
+        id='session_checker',
+        replace_existing=True
+    )
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
@@ -76,5 +92,9 @@ if __name__ == '__main__':
             print("Redis connection successful")
         except Exception as e:
             print(f"Redis connection failed: {str(e)}")
+    
+    # Démarrer le scheduler après l'initialisation
+    if not app.scheduler.running:
+        app.scheduler.start()
     
     socketio.run(app, debug=True, host='0.0.0.0', port=5000)

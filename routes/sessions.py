@@ -3,13 +3,55 @@ from flask_login import login_required, current_user
 from extensions import db, socketio, redis_client
 from models import Session, Question, Quiz, QuizResponse
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 import logging
+from apscheduler.schedulers.background import BackgroundScheduler
 
 sessions_bp = Blueprint('sessions', __name__)
-
 logger = logging.getLogger(__name__)
+
+def init_session_scheduler(app):
+    """Initialise le scheduler pour les sessions"""
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(
+        func=check_expired_sessions,
+        trigger='interval',
+        minutes=1,
+        id='session_checker',
+        replace_existing=True
+    )
+    scheduler.start()
+
+def check_expired_sessions():
+    """Vérifie et termine automatiquement les sessions expirées"""
+    with current_app.app_context():
+        try:
+            now = datetime.utcnow()
+            # Sessions en cours dont l'heure de fin est dépassée
+            expired_sessions = Session.query.filter(
+                Session.end_time <= now,
+                Session.status.in_(['live', 'scheduled'])
+            ).all()
+
+            for session in expired_sessions:
+                try:
+                    logger.info(f"Terminaison automatique de la session {session.id} (dépassée)")
+                    session.status = 'ended'
+                    db.session.commit()
+                    
+                    # Émettre l'événement de fin de session
+                    socketio.emit('session_auto_ended', {
+                        'session_id': session.id,
+                        'message': 'Session terminée automatiquement'
+                    }, room=f'session_{session.id}')
+                    
+                except Exception as e:
+                    db.session.rollback()
+                    logger.error(f"Erreur lors de la terminaison auto de la session {session.id}: {str(e)}")
+                    
+        except Exception as e:
+            logger.error(f"Erreur générale dans check_expired_sessions: {str(e)}")
 
 @sessions_bp.route('/create_session', methods=['GET', 'POST'])
 @login_required
@@ -59,9 +101,22 @@ def manage_session(session_id):
         flash('Action non autorisée', 'danger')
         return redirect(url_for('main.dashboard'))
     
+    # Vérification automatique de l'état
+    if session.status == 'live' and datetime.utcnow() >= session.end_time:
+        session.status = 'ended'
+        db.session.commit()
+        socketio.emit('session_auto_ended', {
+            'session_id': session_id,
+            'message': 'Session terminée automatiquement'
+        }, room=f'session_{session_id}')
+    
     if request.method == 'POST':
         try:
             if 'start' in request.form:
+                if datetime.utcnow() >= session.end_time:
+                    flash("La session ne peut pas démarrer car l'heure de fin est déjà passée", 'danger')
+                    return redirect(url_for('sessions.manage_session', session_id=session_id))
+                
                 session.status = 'live'
                 db.session.commit()
                 socketio.emit('session_status_changed', {
@@ -108,16 +163,13 @@ def manage_session(session_id):
                 flash('Réponse enregistrée avec succès !', 'success')
                 
             elif 'delete_session' in request.form:
-                # Suppression en cascade sécurisée
                 logger.info(f"Tentative de suppression de la session {session_id}")
                 
-                # D'abord supprimer toutes les réponses aux quiz
                 quiz_ids = [quiz.id for quiz in session.quizzes]
                 if quiz_ids:
                     QuizResponse.query.filter(QuizResponse.quiz_id.in_(quiz_ids)).delete(synchronize_session=False)
                     db.session.flush()
                 
-                # Puis supprimer la session (les cascades s'occuperont du reste)
                 db.session.delete(session)
                 db.session.commit()
                 
@@ -157,13 +209,11 @@ def delete_session(session_id):
     try:
         logger.info(f"Suppression de la session {session_id} via la route dédiée")
         
-        # D'abord supprimer toutes les réponses aux quiz
         quiz_ids = [quiz.id for quiz in session.quizzes]
         if quiz_ids:
             QuizResponse.query.filter(QuizResponse.quiz_id.in_(quiz_ids)).delete(synchronize_session=False)
             db.session.flush()
         
-        # Puis supprimer la session
         db.session.delete(session)
         db.session.commit()
             
@@ -180,7 +230,8 @@ def delete_session(session_id):
 def live_session(stream_key):
     session = Session.query.filter_by(stream_key=stream_key).first_or_404()
     
-    if session.status != 'live':
+    now = datetime.utcnow()
+    if not (session.status == 'live' and session.start_time <= now <= session.end_time):
         flash("Cette session n'est pas en cours de diffusion", 'warning')
         return redirect(url_for('main.dashboard'))
     
