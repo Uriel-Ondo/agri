@@ -6,6 +6,11 @@
     <meta http-equiv="Content-Type" content="application/vnd.hbbtv.xhtml+xml; charset=UTF-8" />
     <link rel="icon" href="/favicon.ico" type="image/x-icon">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <style>
+        .correct-answer { background-color: #28a745; color: white; }
+        .selected-correct { background-color: #28a745; color: white; }
+        .selected-incorrect { background-color: #dc3545; color: white; }
+    </style>
 </head>
 <body>
     <div class="app-container">
@@ -46,12 +51,11 @@
     <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
     
     <script>
+        const backendUrl = window.location.origin; 
         let videoSystem = null;
         let sessionId = null;
         let currentQuizId = null;
-        const backendUrl = 'http://localhost:5000';
 
-        // Gestion des identifiants uniques et historique des réponses
         function getDeviceId() {
             let deviceId = localStorage.getItem('deviceId');
             if (!deviceId) {
@@ -67,14 +71,14 @@
         }
 
         function disableQuizOptions() {
-        const options = document.querySelectorAll('#quiz-options li');
-        options.forEach(option => {
-            option.style.pointerEvents = 'none';
-            option.style.cursor = 'not-allowed';
-            // Conserver l'opacité à 1 pour garder les couleurs visibles
-            option.style.opacity = '1'; 
-        });
-    }
+            const options = document.querySelectorAll('#quiz-options li');
+            options.forEach(option => {
+                option.style.pointerEvents = 'none';
+                option.style.cursor = 'not-allowed';
+                option.style.opacity = '1';
+            });
+        }
+
         function enableQuizOptions() {
             const options = document.querySelectorAll('#quiz-options li');
             options.forEach(option => {
@@ -85,62 +89,55 @@
         }
 
         function sendQuizResponse(quizId, selectedOption) {
-        const deviceId = getDeviceId();
-        
-        // Vérification locale immédiate
-        if (checkQuizHistory(quizId)) {
-            document.getElementById('response').innerText = 'Vous avez déjà répondu à ce quiz';
-            return;
-        }
-
-        // Désactiver les options pendant l'envoi
-        disableQuizOptions();
-        document.getElementById('response').innerText = 'Envoi en cours...';
-
-        fetch(`${backendUrl}/session/${sessionId}/quiz/${quizId}/respond`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                device_id: deviceId,
-                selected_option: selectedOption
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                // Mettre à jour l'historique local
-                const quizHistory = JSON.parse(localStorage.getItem('quizHistory') || '{}');
-                quizHistory[quizId] = true;
-                localStorage.setItem('quizHistory', JSON.stringify(quizHistory));
-                
-                const options = document.querySelectorAll('#quiz-options li');
-                const correctIndex = data.correct_answer;
-                
-                // Afficher la réponse correcte en vert
-                options[correctIndex].classList.add('correct-answer');
-                
-                if (data.is_correct) {
-                    document.getElementById('response').innerText = 'Bravo ! C\'est la bonne réponse.';
-                    // Mettre en évidence la réponse choisie (qui est correcte)
-                    options[selectedOption].classList.add('selected-correct');
-                } else {
-                    document.getElementById('response').innerText = 'Mauvaise réponse. La bonne réponse est mise en évidence.';
-                    // Mettre en évidence la réponse choisie (qui est incorrecte)
-                    options[selectedOption].classList.add('selected-incorrect');
-                }
-            } else {
-                document.getElementById('response').innerText = 'Erreur: ' + (data.message || 'Réponse non enregistrée');
-                enableQuizOptions();
+            const deviceId = getDeviceId();
+            if (checkQuizHistory(quizId)) {
+                document.getElementById('response').innerText = 'Vous avez déjà répondu à ce quiz';
+                return;
             }
-        })
-        .catch(error => {
-            console.error('Erreur:', error);
-            document.getElementById('response').innerText = 'Erreur de connexion au serveur';
-            enableQuizOptions();
-        });
-    }
+
+            disableQuizOptions();
+            document.getElementById('response').innerText = 'Envoi en cours...';
+
+            fetch(`${backendUrl}/session/${sessionId}/quiz/${quizId}/respond`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    device_id: deviceId,
+                    selected_option: selectedOption
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    const quizHistory = JSON.parse(localStorage.getItem('quizHistory') || '{}');
+                    quizHistory[quizId] = true;
+                    localStorage.setItem('quizHistory', JSON.stringify(quizHistory));
+                    
+                    const options = document.querySelectorAll('#quiz-options li');
+                    const correctIndex = data.correct_answer;
+                    
+                    options[correctIndex].classList.add('correct-answer');
+                    
+                    if (data.is_correct) {
+                        document.getElementById('response').innerText = 'Bravo ! C\'est la bonne réponse.';
+                        options[selectedOption].classList.add('selected-correct');
+                    } else {
+                        document.getElementById('response').innerText = 'Mauvaise réponse. La bonne réponse est mise en évidence.';
+                        options[selectedOption].classList.add('selected-incorrect');
+                    }
+                } else {
+                    document.getElementById('response').innerText = 'Erreur: ' + (data.message || 'Réponse non enregistrée');
+                    enableQuizOptions();
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                document.getElementById('response').innerText = 'Erreur de connexion au serveur';
+                enableQuizOptions();
+            });
+        }
 
         function initVideoPlayer() {
             const videoPlayer = document.getElementById('video-player');
@@ -155,6 +152,7 @@
                     liveMaxLatencyDurationCount: 6,
                     xhrSetup: function(xhr, url) {
                         xhr.withCredentials = false;
+                        xhr.timeout = 10000; // Ajouter un timeout de 10s
                     }
                 });
                 return { player: videoPlayer, hls: hls };
@@ -168,11 +166,13 @@
         }
 
         function loadHlsVideo(hlsUrl, videoSystem) {
+            console.log('Chargement du flux HLS:', hlsUrl);
             if (videoSystem instanceof HTMLVideoElement) {
                 videoSystem.src = hlsUrl;
                 videoSystem.load();
                 videoSystem.play().catch(e => {
                     console.error('Erreur de lecture native:', e);
+                    document.getElementById('response').innerText = 'Erreur de lecture du flux vidéo';
                 });
             } else if (videoSystem && videoSystem.hls) {
                 videoSystem.hls.loadSource(hlsUrl);
@@ -180,19 +180,24 @@
                 videoSystem.hls.on(Hls.Events.MANIFEST_PARSED, () => {
                     videoSystem.player.play().catch(e => {
                         console.error('Erreur de lecture hls.js:', e);
+                        document.getElementById('response').innerText = 'Erreur de lecture du flux vidéo';
                     });
                 });
                 videoSystem.hls.on(Hls.Events.ERROR, (event, data) => {
                     console.error('Erreur hls.js:', data);
+                    document.getElementById('response').innerText = `Erreur HLS: ${data.type} - ${data.details}`;
                     if (data.fatal) {
                         switch (data.type) {
                             case Hls.ErrorTypes.NETWORK_ERROR:
+                                console.warn('Tentative de rechargement du flux...');
                                 videoSystem.hls.startLoad();
                                 break;
                             case Hls.ErrorTypes.MEDIA_ERROR:
+                                console.warn('Tentative de récupération d\'erreur média...');
                                 videoSystem.hls.recoverMediaError();
                                 break;
                             default:
+                                console.error('Erreur fatale, destruction du flux HLS');
                                 videoSystem.hls.destroy();
                                 break;
                         }
@@ -206,6 +211,7 @@
                 videoSystem.hls.startLoad();
                 videoSystem.player.play().catch(e => {
                     console.error('Erreur lors du retour en direct:', e);
+                    document.getElementById('response').innerText = 'Erreur lors du retour en direct';
                 });
             }
         }
@@ -220,12 +226,13 @@
             });
 
             socket.on('connect', () => {
-                console.log('WebSocket connected');
+                console.log('WebSocket connecté');
                 checkCurrentSession();
             });
 
             socket.on('connect_error', (error) => {
                 console.error('Erreur de connexion WebSocket:', error);
+                document.getElementById('response').innerText = 'Erreur de connexion WebSocket';
             });
 
             socket.on('new_question', (data) => {
@@ -316,10 +323,12 @@
                             if (videoSystem && videoSystem.hls) {
                                 videoSystem.hls.destroy();
                             }
+                            document.getElementById('response').innerText = 'Aucune session en direct';
                         }
                     })
                     .catch(error => {
                         console.error('Erreur API:', error);
+                        document.getElementById('response').innerText = 'Erreur lors de la vérification de la session';
                     });
             }
 
@@ -341,11 +350,9 @@
                                 li.innerText = option;
                                 li.tabIndex = 0;
                                 
-                                // Appliquer les styles si déjà répondu
                                 if (alreadyAnswered) {
                                     li.style.pointerEvents = 'none';
                                     li.style.cursor = 'not-allowed';
-                                    
                                     if (index === quiz.correct_answer) {
                                         li.classList.add('correct-answer');
                                     }
@@ -366,6 +373,7 @@
                     })
                     .catch(error => {
                         console.error('Erreur quizzes:', error);
+                        document.getElementById('response').innerText = 'Erreur lors du chargement des quizzes';
                     });
             }
 

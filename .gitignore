@@ -1,6 +1,65 @@
 venv/
-.env
 __pycache__/
 migrations/
 api/__pycache__/
 routes/__pycache__/
+
+
+# Environnement Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+
+# Fichiers d'environnement
+.env
+.env.docker
+.env.local
+*.env
+
+# Fichiers Docker
+docker-compose.override.yml
+docker-compose.prod.yml
+*.log
+Dockerfile.local
+
+# Données générées
+media/
+mysql-data/
+redis-data/
+
+# Fichiers de développement
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Fichiers temporaires
+*.swp
+*.bak
+*.tmp
+*~
+
+# Bases de données locales
+*.sql
+*.sqlite3
+
+# Logs et fichiers de débogage
+logs/
+*.log
+*.log.*
+
+# Fichiers de test
+coverage/
+.coverage
+*.coverage
+tests/__pycache__/
+
+# Fichiers de déploiement
+*.pid
+*.sock
+*.sock.*

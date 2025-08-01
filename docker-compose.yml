@@ -1,0 +1,91 @@
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+      - "9999:9999"
+    env_file:
+      - .env.docker
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      srs:
+        condition: service_started
+    volumes:
+      - .:/app
+      - media:/app/media
+    restart: unless-stopped
+    networks:
+      - agri-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health-check"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  db:
+    image: mysql:8.0
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: agri_assist
+      MYSQL_USER: admin
+      MYSQL_PASSWORD: Passer123!
+    volumes:
+      - mysql-data:/var/lib/mysql
+    restart: always
+    networks:
+      - agri-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uadmin", "-pPasser123!"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  redis:
+    image: redis:alpine
+    volumes:
+      - redis-data:/data
+    restart: always
+    networks:
+      - agri-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  srs:
+    image: ossrs/srs:latest
+    container_name: srs
+    ports:
+      - "1935:1935"
+      - "8080:8080"
+      - "1985:1985"
+      - "8000:8000/udp"
+    volumes:
+      - ./srs/srs.conf:/usr/local/srs/conf/srs.conf
+      - media:/usr/local/srs/objs/nginx/html
+    environment:
+      CANDIDATE: ${HOST_IP}
+    restart: always
+    networks:
+      - agri-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:1985/api/v1/versions"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mysql-data:
+  redis-data:
+  media:
+
+networks:
+  agri-network:
+    driver: bridge

@@ -6,26 +6,13 @@ import uuid
 from datetime import datetime, timedelta
 import json
 import logging
-from apscheduler.schedulers.background import BackgroundScheduler
 
 sessions_bp = Blueprint('sessions', __name__)
 logger = logging.getLogger(__name__)
 
-def init_session_scheduler(app):
-    """Initialise le scheduler pour les sessions"""
-    scheduler = BackgroundScheduler()
-    scheduler.add_job(
-        func=check_expired_sessions,
-        trigger='interval',
-        minutes=1,
-        id='session_checker',
-        replace_existing=True
-    )
-    scheduler.start()
-
-def check_expired_sessions():
+def check_expired_sessions(app):
     """Vérifie et termine automatiquement les sessions expirées"""
-    with current_app.app_context():
+    with app.app_context():  # Utiliser l'application passée en paramètre
         try:
             now = datetime.utcnow()
             # Sessions en cours dont l'heure de fin est dépassée
