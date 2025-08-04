@@ -105,6 +105,10 @@
             text-align: center;
         }
 
+        .correct-answer { background-color: #28a745; color: white; }
+        .selected-correct { background-color: #28a745; color: white; }
+        .selected-incorrect { background-color: #dc3545; color: white; }
+
         #quiz-question {
             font-weight: bold;
             margin: 15px 0;

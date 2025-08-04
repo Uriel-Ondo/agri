@@ -6,11 +6,7 @@
     <meta http-equiv="Content-Type" content="application/vnd.hbbtv.xhtml+xml; charset=UTF-8" />
     <link rel="icon" href="/favicon.ico" type="image/x-icon">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-    <style>
-        .correct-answer { background-color: #28a745; color: white; }
-        .selected-correct { background-color: #28a745; color: white; }
-        .selected-incorrect { background-color: #dc3545; color: white; }
-    </style>
+
 </head>
 <body>
     <div class="app-container">
@@ -206,15 +202,21 @@
             }
         }
 
-        function seekToLive() {
-            if (videoSystem && videoSystem.hls) {
-                videoSystem.hls.startLoad();
+    function seekToLive() {
+        if (videoSystem && videoSystem.hls) {
+            const livePosition = videoSystem.hls.liveSyncPosition;
+            if (livePosition !== undefined && livePosition !== null) {
+                videoSystem.player.currentTime = livePosition;
                 videoSystem.player.play().catch(e => {
                     console.error('Erreur lors du retour en direct:', e);
                     document.getElementById('response').innerText = 'Erreur lors du retour en direct';
                 });
+            } else {
+                console.error('La position live n\'est pas disponible');
+                document.getElementById('response').innerText = 'La position live n\'est pas disponible';
             }
         }
+    }
 
         document.addEventListener('DOMContentLoaded', function() {
             videoSystem = initVideoPlayer();
