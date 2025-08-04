@@ -176,6 +176,11 @@ srs
 Serveur SRS pour streaming RTMP/HLS
 1935 (RTMP), 8080 (HLS), 1985 (API), 8000/udp (WebRTC)
 
+Initialiser la base de donne
+docker-compose exec web flask db init
+ docker-compose exec web flask db migrate
+docker-compose exec web flask db upgrade
+
 
 Contributeurs
 
