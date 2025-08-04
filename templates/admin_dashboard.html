@@ -73,6 +73,8 @@
                                     <th>ID</th>
                                     <th>Titre</th>
                                     <th>Expert</th>
+                                    <th>Début</th>
+                                    <th>Fin</th>
                                     <th>Statut</th>
                                     <th>Actions</th>
                                 </tr>
@@ -83,8 +85,10 @@
                                     <td>{{ session.id }}</td>
                                     <td>{{ session.title }}</td>
                                     <td>{{ session.user.username }}</td>
+                                    <td>{{ session.start_time.strftime('%d/%m/%Y %H:%M') }}</td>
+                                    <td>{{ session.end_time.strftime('%d/%m/%Y %H:%M') }}</td>
                                     <td>
-                                        <span class="badge bg-{% if session.status == 'active' %}success{% else %}warning{% endif %}">
+                                        <span class="badge bg-{% if session.status == 'scheduled' %}info{% elif session.status == 'live' %}success{% elif session.status == 'ended' %}secondary{% else %}warning{% endif %}">
                                             {{ session.status }}
                                         </span>
                                     </td>

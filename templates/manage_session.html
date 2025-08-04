@@ -19,6 +19,10 @@
                 <p class="mb-3">{{ session.description }}</p>
                 <p><i class="bi bi-person"></i> <strong>Expert :</strong> {{ session.user.username }}</p>
                 <p><i class="bi bi-info-circle"></i> <strong>Statut :</strong> 
+                <!-- Ajout des dates ici -->
+                <p><i class="bi bi-calendar-event"></i> <strong>Début :</strong> {{ session.start_time.strftime('%d/%m/%Y %H:%M') }}</p>
+                <p><i class="bi bi-calendar-check"></i> <strong>Fin :</strong> {{ session.end_time.strftime('%d/%m/%Y %H:%M') }}</p>
+                <!-- Fin de l'ajout -->
                     <span class="badge bg-{% if session.status == 'scheduled' %}info{% elif session.status == 'live' %}success{% else %}secondary{% endif %}">
                         {{ session.status }}
                     </span>

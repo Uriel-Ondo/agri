@@ -1,3 +1,4 @@
+<!-- dashboard.html -->
 {% extends "base.html" %}
 {% block title %}Tableau de bord{% endblock %}
 {% block content %}
@@ -17,6 +18,7 @@
                     <tr>
                         <th>Titre</th>
                         <th>Date de début</th>
+                        <th>Date de fin</th>  <!-- Nouvelle colonne ajoutée -->
                         <th>Statut</th>
                         <th>Actions</th>
                     </tr>
@@ -26,8 +28,9 @@
                         <tr>
                             <td>{{ session.title }}</td>
                             <td>{{ session.start_time.strftime('%d/%m/%Y %H:%M') }}</td>
+                            <td>{{ session.end_time.strftime('%d/%m/%Y %H:%M') }}</td>  <!-- Affichage date de fin -->
                             <td>
-                                <span class="badge bg-{% if session.status == 'planned' %}info{% elif session.status == 'active' %}success{% else %}secondary{% endif %}">
+                                <span class="badge bg-{% if session.status == 'scheduled' %}info{% elif session.status == 'live' %}success{% elif session.status == 'ended' %}secondary{% else %}warning{% endif %}">
                                     {{ session.status }}
                                 </span>
                             </td>
