@@ -37,12 +37,20 @@ while ! mysql -h db -u admin -p"${MYSQL_PASSWORD}" -e "USE agri_assist; SELECT 1
 done
 echo "MySQL access confirmed!"
 
-# Application des migrations
-echo "Step 3: Applying database migrations..."
+# Initialisation complète de la base de données
+echo "Step 3: Initializing database migrations..."
+if [ ! -d "migrations" ]; then
+    echo "Creating new migrations repository..."
+    flask db init
+fi
+
+echo "Generating database migrations..."
+flask db migrate -m "Initial deployment"
+
+echo "Applying database migrations..."
 for i in {1..3}; do
     flask db upgrade && break || {
         echo "Migration attempt $i failed"
-        flask db show
         [ $i -eq 3 ] && exit 1
         sleep 5
     }

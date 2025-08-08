@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   web:
     build: .
@@ -14,7 +16,6 @@ services:
       srs:
         condition: service_started
     volumes:
-      - .:/app
       - media:/app/media
     restart: unless-stopped
     networks:
