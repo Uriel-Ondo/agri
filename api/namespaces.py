@@ -100,7 +100,7 @@ class SessionQuizzes(Resource):
             'question': quiz.question,
             'options': quiz.options,
             'correct_answer': quiz.correct_answer
-        } for quiz in quizzes])
+        } for quiz in quizzes]
 
 @ns_session.route('/<int:session_id>/quiz/<int:quiz_id>/response')
 class QuizResponseAPI(Resource):
