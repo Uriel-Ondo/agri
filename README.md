@@ -1,190 +1,196 @@
-# Agri-Assist
+Agri-Assist
+Agri-Assist est une application web interactive conçue pour fournir des informations agricoles via des sessions de streaming vidéo en direct (RTMP/HLS), des quiz interactifs, et une fonctionnalité de questions/réponses en temps réel. L'application est construite avec Flask, utilise MySQL pour la base de données, Redis pour la gestion des sessions et des sockets, et réutilise le serveur SRS (Simple Realtime Server) de Dr_sante pour le streaming vidéo.
+Fonctionnalités
 
-Agri-Assist est une application web interactive conçue pour fournir des informations agricoles via des sessions de streaming vidéo en direct (RTMP/HLS), des quiz interactifs, et une fonctionnalité de questions/réponses en temps réel. L'application est construite avec Flask, utilise MySQL pour la base de données, Redis pour la gestion des sessions et des sockets, et SRS (Simple Realtime Server) pour le streaming vidéo.
+Streaming vidéo : Diffusion en direct via RTMP (entrée) et HLS (lecture) avec SRS.
+Quiz interactifs : Les utilisateurs peuvent répondre à des quiz agricoles affichés pendant les sessions en direct.
+Questions/Réponses : Les utilisateurs peuvent poser des questions via une interface web, avec des réponses en temps réel via SocketIO.
+Administration : Interface d'administration pour gérer les sessions, quiz, et réponses.
 
-## Fonctionnalités
-- **Streaming vidéo** : Diffusion en direct via RTMP (entrée) et HLS (lecture) avec SRS.
-- **Quiz interactifs** : Les utilisateurs peuvent répondre à des quiz agricoles affichés pendant les sessions en direct.
-- **Questions/Réponses** : Les utilisateurs peuvent poser des questions via une interface web, avec des réponses en temps réel via SocketIO.
-- **Administration** : Interface d'administration pour gérer les sessions, quiz, et réponses.
+Prérequis
 
-## Prérequis
-- **Docker** : Version 20.10 ou supérieure.
-- **Docker Compose** : Version 2.0 ou supérieure.
-- **Git** : Pour cloner le dépôt.
-- **OBS Studio** (optionnel) : Pour tester la publication de flux RTMP.
-- **VLC Media Player** (optionnel) : Pour tester les flux HLS.
+Docker : Version 20.10 ou supérieure.
+Docker Compose : Version 2.0 ou supérieure.
+Git : Pour cloner le dépôt.
+OBS Studio (optionnel) : Pour tester la publication de flux RTMP.
+VLC Media Player (optionnel) : Pour tester les flux HLS.
+Serveur SRS : Le projet réutilise le SRS de Dr_sante (ports 1935, 8080 sur 63.250.58.55).
+DNS : agri.visiotech.me et www.agri.visiotech.me doivent pointer vers 63.250.58.55.
 
-## Structure du projet
+Structure du projet
+agri/
+├── app.py                  # Application Flask principale
+├── config.py              # Configuration Flask
+├── entrypoint.sh          # Script d'entrée pour le conteneur web
+├── Dockerfile             # Définition du conteneur Flask
+├── docker-compose.yml     # Configuration des services Docker
+├── .env.docker            # Variables d'environnement (non versionnées)
+├── media/                 # Dossier pour les fichiers HLS (généré)
+├── routes/                # Blueprints Flask
+├── models/                # Modèles SQLAlchemy
+├── static/                # Fichiers statiques (CSS, JS)
+├── templates/             # Templates HTML (ex. hbbtv_index.html)
+├── requirements.txt       # Dépendances Python
+└── README.md              # Ce fichier
 
-agri/├── app.py                  # Application Flask principale├── config.py              # Configuration Flask├── entrypoint.sh          # Script d'entrée pour le conteneur web├── Dockerfile             # Définition du conteneur Flask├── docker-compose.yml     # Configuration des services Docker├── .env.docker            # Variables d'environnement (non versionnées)├── srs/                   # Configuration SRS│   └── srs.conf           # Configuration du serveur SRS├── media/                 # Dossier pour les fichiers HLS (généré)├── routes/                # Blueprints Flask├── models/                # Modèles SQLAlchemy├── static/                # Fichiers statiques (CSS, JS)├── templates/             # Templates HTML (ex. hbbtv_index.html)├── requirements.txt       # Dépendances Python└── README.md              # Ce fichier
-
-## Configuration
-
-### 1. Cloner le dépôt
-```bash
-git clone <URL_DU_DÉPÔT>
+Configuration
+1. Cloner le dépôt
+cd /home/uriel/projets
+git clone git@github.com:nospi510/agri.git
 cd agri
 
 2. Créer le fichier .env.docker
 Créez un fichier .env.docker à la racine du projet avec le contenu suivant :
-# Application
-SECRET_KEY="votre_clé_secrète_sécurisée"
+SECRET_KEY=$(openssl rand -hex 24)
 FLASK_DEBUG=0
 
 # Database
-SQLALCHEMY_DATABASE_URI="mysql+mysqldb://admin:Passer123!@db/agri_assist"
-MYSQL_PASSWORD="Passer123!"
+SQLALCHEMY_DATABASE_URI=mysql+mysqldb://admin:Passer123!@db/agri_assist
+MYSQL_ROOT_PASSWORD=rootpassword
+MYSQL_DATABASE=agri_assist
+MYSQL_USER=admin
+MYSQL_PASSWORD=password
 
 # Redis
-REDIS_HOST="redis"
+REDIS_HOST=redis
 REDIS_PORT=6379
 REDIS_DB=0
 
 # SRS Configuration
-SRS_SERVER="localhost"
+SRS_SERVER=ip_du_server
 SRS_RTMP_PORT=1935
 SRS_HTTP_PORT=8080
-HOST_IP="votre_ip_hôte"  # Ex. 192.168.1.99
+PUBLIC_DOMAIN=agri.visiotech.me
 
 # Admin
-ADMIN_NAME="admin"
-ADMIN_EMAIL="admin@example.com"
-ADMIN_PASSWORD="votre_mot_de_passe_admin"
-
-# Stream Configuration
-STREAM_KEY="livestream"
-HLS_PLAYLIST="live/livestream.m3u8"
+ADMIN_NAME=admin
+ADMIN_EMAIL=admin@mail.test
+ADMIN_PASSWORD=password
 
 Notes :
 
-Remplacez votre_clé_secrète_sécurisée par une clé générée (par exemple, openssl rand -hex 32).
-Remplacez HOST_IP par l'IP de votre machine hôte (exécutez ip addr pour la trouver).
-Ne versionnez pas .env.docker (il est exclu par .gitignore).
+Ne versionnez pas .env.docker (exclu par .gitignore).
+Assurez-vous que Dr_sante est en cours d’exécution pour accéder à SRS.
 
-3. Construire et lancer les conteneurs
-docker-compose up --build -d
+3. Configurer Nginx
+Mettez à jour /home/nospi/projets/visiotech/nginx/conf.d/app.conf pour ajouter agri.visiotech.me :
+nano /home/nospi/projets/visiotech/nginx/conf.d/app.conf
+
+Ajoutez un bloc pour agri.visiotech.me (voir ci-dessous).
+4. Construire et lancer les conteneurs
+cd /home/uriel/projets/agri
+docker compose up --build -d
 
 Cela démarre les services suivants :
 
-web : Application Flask (port 5000 pour l'interface, 9999 pour SocketIO).
+web : Application Flask (port 8004).
 db : Base de données MySQL (port interne 3306).
 redis : Cache Redis (port interne 6379).
-srs : Serveur SRS pour le streaming RTMP/HLS (ports 1935, 8080, 1985, 8000/udp).
 
-4. Vérifier les logs
-docker-compose logs -f web
-docker-compose logs -f srs
-docker-compose logs -f db
-docker-compose logs -f redis
+5. Initialiser la base de données
+docker compose exec web flask db init
+docker compose exec web flask db migrate -m "Initial deployment"
+docker compose exec web flask db upgrade
 
-5. Tester le streaming
+6. Créer l’utilisateur admin
+docker compose exec web python -c "from app import create_app; app=create_app(); with app.app_context(): from models import User; from werkzeug.security import generate_password_hash; u=User(username='uriel', email='uriel@visiotech.me', password_hash=generate_password_hash('Passer123!'), role='admin'); from extensions import db; db.session.add(u); db.session.commit()"
 
-Publier un flux RTMP :
+7. Configurer HTTPS
+Générez les certificats SSL pour agri.visiotech.me :
+cd /home/nospi/projets/visiotech
+docker compose exec certbot certbot certonly --webroot --webroot-path=/etc/letsencrypt -d agri.visiotech.me -d www.agri.visiotech.me
 
-Utilisez OBS Studio :
-URL : rtmp://localhost:1935/live/livestream
-Clé de flux : livestream (ou la valeur de STREAM_KEY dans .env.docker).
+Redémarrez Nginx :
+docker compose restart nginx
 
+Test en local
 
-Vérifiez les logs SRS :docker-compose logs -f srs
+Exposer le port 8004 :Dans docker-compose.yml, le port 8004 est déjà exposé. Accédez à :
 
-
-
-
-Lire le flux HLS :
-
-Ouvrez http://localhost:8080/live/livestream.m3u8 dans VLC ou un navigateur.
-Accédez à http://localhost:5000 pour voir le flux dans l'interface web.
+Localement : http://localhost:8004
+Depuis une autre machine : http://63.250.58.55:8004
 
 
-Vérifier CORS :
-curl -I http://localhost:8080/live/livestream.m3u8
+Vérifier WebSocket :Ouvre la console du navigateur (F12) et confirme WebSocket connected.
 
-Vérifiez la présence de Access-Control-Allow-Origin: *.
+Tester la diffusion :
+
+Configurez OBS avec l’URL RTMP : rtmp://63.250.58.55:1935/live/session_<stream_key>
+Testez l’URL HLS dans VLC : http://63.250.58.55:8080/live/session_<stream_key>.m3u8
+Accédez à http://63.250.58.55:8004/hbbtv et vérifiez le flux vidéo.
 
 
-6. Accéder à l'interface d'administration
 
-URL : http://localhost:5000/admin
-Identifiants : Utilisez ADMIN_EMAIL et ADMIN_PASSWORD définis dans .env.docker.
+Test en production
+
+Désactiver le port local :Dans docker-compose.yml, commentez :
+#ports:
+#  - "8004:8004"
+
+
+Redémarrer :
+docker compose up -d
+
+
+Accéder :
+
+URL : https://agri.visiotech.me
+WebSocket : wss://agri.visiotech.me/socket.io
+HLS : https://agri.visiotech.me/live/session_<stream_key>.m3u8
+
+
+Vérifier la diffusion :
+
+Configurez OBS avec l’URL RTMP : rtmp://63.250.58.55:1935/live/session_<stream_key>
+Testez l’URL HLS dans un navigateur ou VLC : https://agri.visiotech.me/live/session_<stream_key>.m3u8
+
+
 
 Dépannage
+Vérifier les journaux
+docker compose logs web
+docker compose logs db
+docker compose logs redis
+docker logs dr_sante-srs-1
+cat /home/nospi/projets/visiotech/nginx/logs/error.log
 
-Conteneur web unhealthy :
-Vérifiez les logs : docker-compose logs -f web.
-Testez l'endpoint de santé : docker-compose exec web curl http://localhost:5000/health-check.
-Assurez-vous que entrypoint.sh attend les services (db, redis, srs).
+Vérifier SRS
+docker logs dr_sante-srs-1
+curl http://63.250.58.55:8080
 
+Vérifier Redis
+docker compose exec redis redis-cli ping
 
-Erreur CORS :
-Vérifiez que srs.conf inclut les en-têtes CORS dans http_server.http_headers.
-Testez avec curl -I http://localhost:8080/live/livestream.m3u8.
+Vérifier les tables
+docker compose exec db mysql -uadmin -pPasser123! -e "USE agri_assist; SHOW TABLES;"
 
+Vérifier l’utilisateur admin
+docker compose exec db mysql -uadmin -pPasser123! -e "USE agri_assist; SELECT * FROM user WHERE email='uriel@visiotech.me';"
 
-Connexion à la base de données échoue :
-Testez : docker-compose exec web mysql -h db -u admin -pPasser123! -e "SELECT 1".
+Vérifier WebSocket
 
+Ouvre la console du navigateur (F12) et vérifie la connexion à ws://63.250.58.55:8004/socket.io (local) ou wss://agri.visiotech.me/socket.io (production).
+Cherche WebSocket connected.
 
-Redis non accessible :
-Testez : docker-compose exec web redis-cli -h redis ping.
+Vérifier la diffusion
 
-
-SRS ne diffuse pas :
-Vérifiez les logs : docker-compose logs -f srs.
-Testez l'API : docker-compose exec web curl http://srs:1985/api/v1/versions.
-
-
-
-Maintenance
-
-Mettre à jour les dépendances :docker-compose down
-docker-compose build
-docker-compose up -d
+Si le flux HLS ne charge pas dans hbbtv_index.html, testez :vlc http://63.250.58.55:8080/live/session_<stream_key>.m3u8
 
 
-Nettoyer les volumes :docker-compose down --volumes
-
-Attention : Cela supprime toutes les données persistantes (base de données, Redis, médias).
-
-Structure des services
+Vérifiez les journaux SRS :docker logs dr_sante-srs-1
 
 
 
-Service
-Description
-Ports
+Notes
 
-
-
-web
-Application Flask (interface web et SocketIO)
-5000, 9999
-
-
-db
-Base de données MySQL
-3306 (interne)
-
-
-redis
-Cache Redis pour sessions et sockets
-6379 (interne)
-
-
-srs
-Serveur SRS pour streaming RTMP/HLS
-1935 (RTMP), 8080 (HLS), 1985 (API), 8000/udp (WebRTC)
-
-Initialiser la base de donne
-docker-compose exec web flask db init
- docker-compose exec web flask db migrate
-docker-compose exec web flask db upgrade
-
+SRS : Réutilise le SRS de Dr_sante (rtmp://63.250.58.55:1935/live/session_<stream_key>, http://63.250.58.55:8080/live/session_<stream_key>.m3u8). En production, HLS passe par Nginx (https://agri.visiotech.me/live/...).
+WebSocket : Assurez-vous que gevent-websocket est dans requirements.txt.
+Sécurité : Les mots de passe dans .env.docker sont sensibles et non versionnés.
+Nginx : Configuré dans /home/nospi/projets/visiotech.
 
 Contributeurs
 
 Uriel (uriel@visiotech.me)
 
 Licence
-Ce projet est sous licence MIT. Voir le fichier LICENSE pour plus de détails.```
+Ce projet est sous licence MIT. Voir le fichier LICENSE pour plus de détails.

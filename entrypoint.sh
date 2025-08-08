@@ -11,7 +11,7 @@ wait_for_service() {
     local service=$3
     local max_retries=30
     local retries=0
-    
+
     echo "Step 1: Waiting for $service ($host:$port)..."
     until nc -z -w 1 $host $port; do
         retries=$((retries+1))
@@ -27,11 +27,10 @@ wait_for_service() {
 # Attente des services
 wait_for_service db 3306 "MySQL"
 wait_for_service redis 6379 "Redis"
-wait_for_service srs 1985 "SRS"
 
 # Vérification MySQL avec credentials
 echo "Step 2: Verifying MySQL database access..."
-while ! mysql -h db -u admin -p"${MYSQL_PASSWORD}" -e "USE agri_assist; SELECT 1;"; do
+while ! mysql -h db -u "${MYSQL_USER}" -p"${MYSQL_PASSWORD}" -e "USE agri_assist; SELECT 1;"; do
     echo "MySQL access failed, retrying..."
     sleep 2
 done

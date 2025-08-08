@@ -54,7 +54,7 @@ class CurrentSession(Resource):
                 'status': session.status,
                 'stream_key': session.stream_key,
                 'user_id': session.user_id,
-                'hls_url': f"http://{current_app.config['SRS_SERVER']}:{current_app.config['SRS_HTTP_PORT']}/live/{session.stream_key}.m3u8"
+                'hls_url': f"https://{current_app.config['PUBLIC_DOMAIN']}/live/{session.stream_key}.m3u8"
             }
         return {'message': 'No live session'}, 404
 
@@ -100,7 +100,7 @@ class SessionQuizzes(Resource):
             'question': quiz.question,
             'options': quiz.options,
             'correct_answer': quiz.correct_answer
-        } for quiz in quizzes]
+        } for quiz in quizzes])
 
 @ns_session.route('/<int:session_id>/quiz/<int:quiz_id>/response')
 class QuizResponseAPI(Resource):

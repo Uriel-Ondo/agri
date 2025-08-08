@@ -1,7 +1,6 @@
 import os
-import socket
-from gevent import monkey  # Ajout pour le monkey patching
-monkey.patch_all()  # Appliquer le patch avant toute autre importation
+from gevent import monkey
+monkey.patch_all()
 
 from flask import Flask
 from config import Config
@@ -26,14 +25,14 @@ def create_app():
     redis_client = init_redis(app)
 
     # Configuration de SocketIO
-    socketio.init_app(app, 
-                      cors_allowed_origins="*", 
+    socketio.init_app(app,
+                      cors_allowed_origins="*",
                       async_mode='gevent',
                       logger=True,
                       engineio_logger=True,
                       ping_timeout=60,
                       ping_interval=25,
-                      message_queue=f'redis://{app.config["REDIS_HOST"]}:{app.config["REDIS_PORT"]}/0')
+                      message_queue=f'redis://{app.config["REDIS_HOST"]}:{app.config["REDIS_PORT"]}/{app.config["REDIS_DB"]}')
 
     # Enregistrer les blueprints
     app.register_blueprint(auth_bp)
@@ -54,21 +53,11 @@ def create_app():
     def load_user(user_id):
         return db.session.get(User, int(user_id))
 
-    def get_host_ip():
-        try:
-            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            s.connect(("8.8.8.8", 80))
-            ip = s.getsockname()[0]
-            s.close()
-            return ip
-        except:
-            return 'localhost'
-
     # Initialiser le scheduler
     if not hasattr(app, 'scheduler'):
         app.scheduler = BackgroundScheduler()
         app.scheduler.add_job(
-            func=lambda: check_expired_sessions(app),  # Passer l'application
+            func=lambda: check_expired_sessions(app),
             trigger='interval',
             minutes=1,
             id='session_checker',
@@ -82,7 +71,7 @@ def create_app():
         admin_name = os.getenv('ADMIN_NAME')
         admin_email = os.getenv('ADMIN_EMAIL')
         admin_password = os.getenv('ADMIN_PASSWORD')
-        
+
         if admin_name and admin_email and admin_password:
             admin_user = User.query.filter_by(email=admin_email).first()
             if not admin_user:
@@ -97,7 +86,7 @@ def create_app():
                 db.session.add(admin_user)
                 db.session.commit()
                 print(f"Admin user {admin_name} created")
-        
+
         try:
             redis_client.ping()
             print("Redis connection successful")
