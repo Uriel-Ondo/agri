@@ -17,7 +17,51 @@ Agri-Assist est une application web interactive conçue pour fournir des informa
 
 ## Structure du projet
 
-agri/├── app.py                  # Application Flask principale├── config.py              # Configuration Flask├── entrypoint.sh          # Script d'entrée pour le conteneur web├── Dockerfile             # Définition du conteneur Flask├── docker-compose.yml     # Configuration des services Docker├── .env.docker            # Variables d'environnement (non versionnées)├── srs/                   # Configuration SRS│   └── srs.conf           # Configuration du serveur SRS├── media/                 # Dossier pour les fichiers HLS (généré)├── routes/                # Blueprints Flask├── models/                # Modèles SQLAlchemy├── static/                # Fichiers statiques (CSS, JS)├── templates/             # Templates HTML (ex. hbbtv_index.html)├── requirements.txt       # Dépendances Python└── README.md              # Ce fichier
+agri/
+├── Dockerfile
+├── README.md
+├── api
+│   ├── __init__.py
+│   └── namespaces.py
+├── app.py
+├── config.py
+├── docker-compose.yml
+├── entrypoint.sh
+├── extensions.py
+├── models.py
+├── requirements.txt
+├── routes
+│   ├── __init__.py
+│   ├── admin.py
+│   ├── auth.py
+│   ├── main.py
+│   ├── quizzes.py
+│   └── sessions.py
+├── sockets.py
+├── srs
+│   └── srs.conf
+├── static
+│   ├── css
+│   │   ├── style.css
+│   │   └── styles.css
+│   └── images
+│       └── favicon.ico
+└── templates
+    ├── admin_create_user.html
+    ├── admin_dashboard.html
+    ├── admin_edit_user.html
+    ├── base.html
+    ├── broadcast.html
+    ├── create_quiz.html
+    ├── create_session.html
+    ├── dashboard.html
+    ├── hbbtv_index.html
+    ├── live_session.html
+    ├── login.html
+    ├── manage_session.html
+    ├── profile.html
+    ├── quiz_results.html
+    └── register.html
 
 ## Configuration
 
