@@ -15,8 +15,9 @@ Agri-Assist est une application web interactive conçue pour fournir des informa
 - **OBS Studio** (optionnel) : Pour tester la publication de flux RTMP.
 - **VLC Media Player** (optionnel) : Pour tester les flux HLS.
 
-## Structure du projet
+## Arborescence du projet
 
+```text
 agri/
 ├── Dockerfile
 ├── README.md
@@ -62,6 +63,7 @@ agri/
     ├── profile.html
     ├── quiz_results.html
     └── register.html
+```
 
 ## Configuration
 
