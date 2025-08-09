@@ -25,9 +25,11 @@ agri/├── app.py                  # Application Flask principale├── c
 ```bash
 git clone <URL_DU_DÉPÔT>
 cd agri
-
-2. Créer le fichier .env.docker
+```
+### 2. Créer le fichier .env.docker
 Créez un fichier .env.docker à la racine du projet avec le contenu suivant :
+
+```bash
 # Application
 SECRET_KEY="votre_clé_secrète_sécurisée"
 FLASK_DEBUG=0
@@ -56,14 +58,18 @@ ADMIN_PASSWORD="votre_mot_de_passe_admin"
 STREAM_KEY="livestream"
 HLS_PLAYLIST="live/livestream.m3u8"
 
-Notes :
+```
+
+## Notes :
 
 Remplacez votre_clé_secrète_sécurisée par une clé générée (par exemple, openssl rand -hex 32).
 Remplacez HOST_IP par l'IP de votre machine hôte (exécutez ip addr pour la trouver).
 Ne versionnez pas .env.docker (il est exclu par .gitignore).
 
-3. Construire et lancer les conteneurs
+### 3. Construire et lancer les conteneurs
+```bash
 docker-compose up --build -d
+```
 
 Cela démarre les services suivants :
 
@@ -72,13 +78,15 @@ db : Base de données MySQL (port interne 3306).
 redis : Cache Redis (port interne 6379).
 srs : Serveur SRS pour le streaming RTMP/HLS (ports 1935, 8080, 1985, 8000/udp).
 
-4. Vérifier les logs
+### 4. Vérifier les logs
+```bash
 docker-compose logs -f web
 docker-compose logs -f srs
 docker-compose logs -f db
 docker-compose logs -f redis
+```
 
-5. Tester le streaming
+### 5. Tester le streaming
 
 Publier un flux RTMP :
 
@@ -87,8 +95,10 @@ URL : rtmp://localhost:1935/live/livestream
 Clé de flux : livestream (ou la valeur de STREAM_KEY dans .env.docker).
 
 
-Vérifiez les logs SRS :docker-compose logs -f srs
-
+### Vérifiez les logs SRS :
+```bash
+docker-compose logs -f srs
+```
 
 
 
@@ -104,7 +114,7 @@ curl -I http://localhost:8080/live/livestream.m3u8
 Vérifiez la présence de Access-Control-Allow-Origin: *.
 
 
-6. Accéder à l'interface d'administration
+### 6. Accéder à l'interface d'administration
 
 URL : http://localhost:5000/admin
 Identifiants : Utilisez ADMIN_EMAIL et ADMIN_PASSWORD définis dans .env.docker.
@@ -130,31 +140,36 @@ Redis non accessible :
 Testez : docker-compose exec web redis-cli -h redis ping.
 
 
-SRS ne diffuse pas :
-Vérifiez les logs : docker-compose logs -f srs.
+### SRS ne diffuse pas :
+Vérifiez les logs : 
+```bash
+docker-compose logs -f srs.
 Testez l'API : docker-compose exec web curl http://srs:1985/api/v1/versions.
+```
 
 
+### Maintenance
 
-Maintenance
-
-Mettre à jour les dépendances :docker-compose down
+Mettre à jour les dépendances :
+```bash
+docker-compose down
 docker-compose build
 docker-compose up -d
+```
 
-
-Nettoyer les volumes :docker-compose down --volumes
-
+### Nettoyer les volumes :
+```bash
+docker-compose down --volumes
+```
 Attention : Cela supprime toutes les données persistantes (base de données, Redis, médias).
 
-Structure des services
+## Structure des services
 
 
 
 Service
 Description
 Ports
-
 
 
 web
@@ -182,9 +197,9 @@ docker-compose exec web flask db init
 docker-compose exec web flask db upgrade
 
 
-Contributeurs
+### Contributeurs
 
 Uriel (uriel@visiotech.me)
 
-Licence
+### Licence
 Ce projet est sous licence MIT. Voir le fichier LICENSE pour plus de détails.```
