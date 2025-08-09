@@ -69,7 +69,7 @@ agri/
 
 ### 1. Cloner le dépôt
 ```bash
-git clone <URL_DU_DÉPÔT>
+git clone https://github.com/Uriel-Ondo/agri.git
 cd agri
 ```
 ### 2. Créer le fichier .env.docker
