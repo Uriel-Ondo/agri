@@ -143,8 +143,12 @@ Testez : docker-compose exec web redis-cli -h redis ping.
 ### SRS ne diffuse pas :
 Vérifiez les logs : 
 ```bash
-docker-compose logs -f srs.
-Testez l'API : docker-compose exec web curl http://srs:1985/api/v1/versions.
+docker-compose logs -f srs
+```
+
+Testez l'API :
+```bash
+ docker-compose exec web curl http://srs:1985/api/v1/versions.
 ```
 
 
