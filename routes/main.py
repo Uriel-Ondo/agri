@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, send_from_directory, current_app
+from flask import Blueprint, render_template, redirect, url_for, send_from_directory, current_app, make_response
 from flask_login import login_required, current_user
 from models import Session
 import os
@@ -7,7 +7,9 @@ main_bp = Blueprint('main', __name__)
 
 @main_bp.route('/hbbtv')
 def hbbtv():
-    return render_template('hbbtv_index.html')
+    response = make_response(render_template('hbbtv_index.html'))
+    response.headers['Content-Type'] = 'application/vnd.hbbtv.xhtml+xml; charset=utf-8'
+    return response
 
 @main_bp.route('/favicon.ico')
 def favicon():

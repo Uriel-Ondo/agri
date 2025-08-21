@@ -30,7 +30,7 @@ wait_for_service redis 6379 "Redis"
 
 # Vérification MySQL avec credentials
 echo "Step 2: Verifying MySQL database access..."
-while ! mysql -h db -u "${MYSQL_USER}" -p"${MYSQL_PASSWORD}" -e "USE agri_assist; SELECT 1;"; do
+while ! mysql --protocol=TCP --ssl=0 -h db -u "${MYSQL_USER}" -p"${MYSQL_PASSWORD}" -e "USE agri_assist; SELECT 1;"; do
     echo "MySQL access failed, retrying..."
     sleep 2
 done

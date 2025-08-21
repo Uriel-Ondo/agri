@@ -82,3 +82,36 @@ def register_handlers(socketio, redis_client, db):
             'quiz_id': quiz_id,
             'selected_option': selected_option
         }, room=f'session_{session_id}')
+
+    @socketio.on('queue_updated')
+    def handle_queue_updated(data):
+        session_id = data['session_id']
+        spectator_id = data['spectator_id']
+        status = data['status']
+        queue_position = Spectator.query.filter_by(session_id=session_id, status='pending').filter(Spectator.timestamp < Spectator.query.filter_by(session_id=session_id, spectator_id=spectator_id).first().timestamp).count()
+        emit('queue_updated', {
+            'session_id': session_id,
+            'spectator_id': spectator_id,
+            'status': status,
+            'queue_position': queue_position
+        }, room=f'session_{session_id}')
+
+    @socketio.on('spectator_approved')
+    def handle_spectator_approved(data):
+        session_id = data['session_id']
+        spectator_id = data['spectator_id']
+        stream_key = data['stream_key']
+        emit('spectator_approved', {
+            'session_id': session_id,
+            'spectator_id': spectator_id,
+            'stream_key': stream_key
+        }, room=f'session_{session_id}')
+
+    @socketio.on('spectator_stream_stopped')
+    def handle_spectator_stream_stopped(data):
+        session_id = data['session_id']
+        spectator_id = data['spectator_id']
+        emit('spectator_stream_stopped', {
+            'session_id': session_id,
+            'spectator_id': spectator_id
+        }, room=f'session_{session_id}')

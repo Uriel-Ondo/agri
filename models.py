@@ -23,6 +23,8 @@ class Session(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     questions = db.relationship('Question', backref='session', cascade='all, delete-orphan', lazy=True)
     quizzes = db.relationship('Quiz', backref='session', cascade='all, delete-orphan', lazy=True)
+    spectators = db.relationship('Spectator', backref='session', lazy=True)
+
     
     @property
     def is_active(self):
@@ -59,3 +61,12 @@ class QuizResponse(db.Model):
     device_id = db.Column(db.String(50), nullable=True)
     selected_option = db.Column(db.Integer, nullable=False)
     timestamp = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+
+class Spectator(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    session_id = db.Column(db.Integer, db.ForeignKey('session.id'), nullable=False)
+    spectator_id = db.Column(db.String(50), unique=True, nullable=False, default=lambda: f"spectator_{uuid.uuid4().hex[:8]}")
+    status = db.Column(db.String(20), nullable=False, default='pending')  # pending, approved, streaming, rejected
+    timestamp = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    stream_key = db.Column(db.String(50), unique=True, nullable=False, default=lambda: f"spectator_{uuid.uuid4().hex[:8]}")

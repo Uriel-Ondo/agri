@@ -14,3 +14,8 @@ uuid
 python-dotenv
 flask-restx
 flask-cors
+mysql-connector-python
+gunicorn
+qrcode
+Pillow
+requests

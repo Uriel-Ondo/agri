@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app
+from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, jsonify, make_response
 from flask_login import login_required, current_user
 from extensions import db, socketio, redis_client
 from models import Session, Question, Quiz, QuizResponse
@@ -76,6 +76,16 @@ def create_session():
             flash(f"Erreur lors de la création de la session: {str(e)}", 'danger')
 
     return render_template('create_session.html')
+
+@sessions_bp.route('/api/sessions/current', methods=['GET'])
+def get_current_session():
+    session = Session.query.filter_by(status='live').first()
+    if not session:
+        return jsonify({}), 404
+    return jsonify({
+        'id': session.id,
+        'stream_key': session.stream_key
+    })
 
 @sessions_bp.route('/session/<int:session_id>', methods=['GET', 'POST'])
 @login_required
@@ -169,7 +179,7 @@ def manage_session(session_id):
     quizzes = Quiz.query.filter_by(session_id=session_id).order_by(Quiz.timestamp.desc()).all()
 
     rtmp_url = f"rtmp://{current_app.config['SRS_SERVER']}:{current_app.config['SRS_RTMP_PORT']}/live/{session.stream_key}"
-    hls_url = f"https://{current_app.config['PUBLIC_DOMAIN']}/live/{session.stream_key}.m3u8"
+    hls_url = f"{current_app.config['PUBLIC_DOMAIN']}/live/{session.stream_key}.m3u8"
 
     return render_template(
         'manage_session.html',
@@ -219,5 +229,5 @@ def live_session(stream_key):
         flash("Cette session n'est pas en cours de diffusion", 'warning')
         return redirect(url_for('main.dashboard'))
 
-    hls_url = f"https://{current_app.config['PUBLIC_DOMAIN']}/live/{session.stream_key}.m3u8"
+    hls_url = f"{current_app.config['PUBLIC_DOMAIN']}/live/{session.stream_key}.m3u8"
     return render_template('live_session.html', session=session, hls_url=hls_url)
