@@ -1,402 +1,84 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-    <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="application/vnd.hbbtv.xhtml+xml; charset=utf-8" />
     <title>Agri-Assist HbbTV</title>
-    <meta http-equiv="Content-Type" content="application/vnd.hbbtv.xhtml+xml; charset=UTF-8" />
-    <link rel="icon" href="/favicon.ico" type="image/x-icon">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-
+    <link rel="icon" href="/favicon.ico" type="image/x-icon" />
+    <link rel="stylesheet" href="/static/css/fontawesome/all.min.css" />
+    <link rel="stylesheet" href="/static/css/roboto/roboto.css" />
+    <link rel="stylesheet" href="/static/css/styles.css" />
+    <script src="/static/js/hls/hls.js"></script>
+    <script src="/static/js/socketio/socket.io.min.js"></script>
 </head>
-<body>
+<body onload="initApp();">
     <div class="app-container">
         <!-- Colonne de gauche - Quiz -->
         <div class="left-column">
-            <div id="quiz-container">
-                <h2>Quiz Agricole</h2>
-                <p id="quiz-question"></p>
-                <ul id="quiz-options"></ul>
+            <div id="quiz-container" class="card card-float">
+                <div class="card-header">
+                    <h2><i class="fa-solid fa-tractor"></i> Quiz Agricole</h2>
+                </div>
+                <div class="card-body">
+                    <p id="quiz-question" class="quiz-question"></p>
+                    <ul id="quiz-options" class="quiz-options"></ul>
+                    <p class="hbbtv-hint"><i class="fa-solid fa-circle" style="color: #00FF00;"></i> Utilisez le bouton vert pour sélectionner une réponse</p>
+                </div>
+            </div>
+            <div id="qr-container" class="card card-float" style="display: none;">
+                <div class="card-header">
+                    <h2><i class="fa-solid fa-qrcode"></i> Rejoindre la session</h2>
+                </div>
+                <div class="card-body">
+                    <img id="qr-code" src="" alt="QR Code" style="max-width: 100%;" />
+                    <p class="hbbtv-hint">Scannez ce QR Code pour rejoindre la file d'attente ou cliquez sur le lien ci-dessous</p>
+                    <a id="qr-link" href="#" target="_blank" style="display: block; margin-top: 10px; word-break: break-all;"></a>
+                </div>
             </div>
         </div>
-
         <!-- Colonne centrale - Vidéo -->
         <div class="center-column">
-            <div id="video-container">
-                <video id="video-player" controls></video>
-                <button id="live-button" onclick="seekToLive()">Revenir en direct</button>
+            <div id="video-container" class="card card-float">
+                <div class="card-header">
+                    <h2><i class="fa-solid fa-video"></i> Agri-Assist Live</h2>
+                </div>
+                <div class="card-body">
+                    <div class="video-wrapper">
+                        <video id="video-player" controls="controls" autoplay="autoplay" muted="muted" class="video-player main-video" />
+                        <div id="spectator-video-container" style="display: none;">
+                            <div id="spectator-loading" class="loading-message">Veuillez patienter pendant le chargement du flux...</div>
+                            <video id="spectator-video" controls="controls" autoplay="autoplay" muted="muted" class="video-player spectator-video" />
+                        </div>
+                    </div>
+                    <button id="live-button" class="btn btn-primary btn-pulse" onclick="seekToLive()">
+                        <i class="fa-solid fa-broadcast-tower"></i> Revenir en direct
+                    </button>
+                    <p class="hbbtv-hint"><i class="fa-solid fa-circle" style="color: #0000FF;"></i> Appuyez sur le bouton bleu pour revenir en direct</p>
+                </div>
             </div>
+            <div id="response" class="alert alert-info mt-3"></div>
         </div>
-
         <!-- Colonne de droite - Questions/Réponses -->
         <div class="right-column">
-            <div id="question-form">
-                <h2>Posez votre question</h2>
-                <input type="text" id="question-input" placeholder="Votre question sur l'agriculture...">
-                <button onclick="sendQuestion()">Envoyer</button>
+            <div id="question-form" class="card card-float">
+                <div class="card-header">
+                    <h2><i class="fa-solid fa-question-circle"></i> Posez votre question</h2>
+                </div>
+                <div class="card-body">
+                    <input type="text" id="question-input" placeholder="Votre question sur l'agriculture..." class="form-control" />
+                    <button onclick="sendQuestion()" class="btn btn-danger btn-pulse">
+                        <i class="fa-solid fa-paper-plane"></i> Envoyer
+                    </button>
+                    <p class="hbbtv-hint"><i class="fa-solid fa-circle" style="color: #FF0000;"></i> Appuyez sur le bouton rouge pour envoyer</p>
+                </div>
             </div>
-            <div id="questions-container">
-                <h2>Questions et réponses</h2>
-                <div id="questions"></div>
+            <div id="questions-container" class="card card-float">
+                <div class="card-header">
+                    <h2><i class="fa-solid fa-comments"></i> Questions des spectateurs</h2>
+                </div>
+                <div class="card-body questions-list" id="questions-list"></div>
             </div>
         </div>
     </div>
-
-    <div id="response"></div>
-    
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.15/dist/hls.min.js"></script>
-    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
-    
-    <script>
-        const backendUrl = window.location.origin; 
-        let videoSystem = null;
-        let sessionId = null;
-        let currentQuizId = null;
-
-        function getDeviceId() {
-            let deviceId = localStorage.getItem('deviceId');
-            if (!deviceId) {
-                deviceId = 'device_' + Math.random().toString(36).substr(2, 9);
-                localStorage.setItem('deviceId', deviceId);
-            }
-            return deviceId;
-        }
-
-        function checkQuizHistory(quizId) {
-            const quizHistory = JSON.parse(localStorage.getItem('quizHistory') || '{}');
-            return quizHistory[quizId] || false;
-        }
-
-        function disableQuizOptions() {
-            const options = document.querySelectorAll('#quiz-options li');
-            options.forEach(option => {
-                option.style.pointerEvents = 'none';
-                option.style.cursor = 'not-allowed';
-                option.style.opacity = '1';
-            });
-        }
-
-        function enableQuizOptions() {
-            const options = document.querySelectorAll('#quiz-options li');
-            options.forEach(option => {
-                option.style.pointerEvents = 'auto';
-                option.style.opacity = '1';
-                option.style.cursor = 'pointer';
-            });
-        }
-
-        function sendQuizResponse(quizId, selectedOption) {
-            const deviceId = getDeviceId();
-            if (checkQuizHistory(quizId)) {
-                document.getElementById('response').innerText = 'Vous avez déjà répondu à ce quiz';
-                return;
-            }
-
-            disableQuizOptions();
-            document.getElementById('response').innerText = 'Envoi en cours...';
-
-            fetch(`${backendUrl}/session/${sessionId}/quiz/${quizId}/respond`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    device_id: deviceId,
-                    selected_option: selectedOption
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    const quizHistory = JSON.parse(localStorage.getItem('quizHistory') || '{}');
-                    quizHistory[quizId] = true;
-                    localStorage.setItem('quizHistory', JSON.stringify(quizHistory));
-                    
-                    const options = document.querySelectorAll('#quiz-options li');
-                    const correctIndex = data.correct_answer;
-                    
-                    options[correctIndex].classList.add('correct-answer');
-                    
-                    if (data.is_correct) {
-                        document.getElementById('response').innerText = 'Bravo ! C\'est la bonne réponse.';
-                        options[selectedOption].classList.add('selected-correct');
-                    } else {
-                        document.getElementById('response').innerText = 'Mauvaise réponse. La bonne réponse est mise en évidence.';
-                        options[selectedOption].classList.add('selected-incorrect');
-                    }
-                } else {
-                    document.getElementById('response').innerText = 'Erreur: ' + (data.message || 'Réponse non enregistrée');
-                    enableQuizOptions();
-                }
-            })
-            .catch(error => {
-                console.error('Erreur:', error);
-                document.getElementById('response').innerText = 'Erreur de connexion au serveur';
-                enableQuizOptions();
-            });
-        }
-
-        function initVideoPlayer() {
-            const videoPlayer = document.getElementById('video-player');
-            if (Hls.isSupported()) {
-                const hls = new Hls({
-                    debug: true,
-                    enableWorker: true,
-                    lowLatencyMode: true,
-                    maxBufferSize: 600000,
-                    maxBufferLength: 30,
-                    liveSyncDurationCount: 3,
-                    liveMaxLatencyDurationCount: 6,
-                    xhrSetup: function(xhr, url) {
-                        xhr.withCredentials = false;
-                        xhr.timeout = 10000; // Ajouter un timeout de 10s
-                    }
-                });
-                return { player: videoPlayer, hls: hls };
-            } else if (videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
-                return videoPlayer;
-            } else {
-                console.error('Aucun support HLS détecté');
-                document.getElementById('response').innerText = 'Votre navigateur ne supporte pas la lecture HLS';
-                return null;
-            }
-        }
-
-        function loadHlsVideo(hlsUrl, videoSystem) {
-            console.log('Chargement du flux HLS:', hlsUrl);
-            if (videoSystem instanceof HTMLVideoElement) {
-                videoSystem.src = hlsUrl;
-                videoSystem.load();
-                videoSystem.play().catch(e => {
-                    console.error('Erreur de lecture native:', e);
-                    document.getElementById('response').innerText = 'Erreur de lecture du flux vidéo';
-                });
-            } else if (videoSystem && videoSystem.hls) {
-                videoSystem.hls.loadSource(hlsUrl);
-                videoSystem.hls.attachMedia(videoSystem.player);
-                videoSystem.hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                    videoSystem.player.play().catch(e => {
-                        console.error('Erreur de lecture hls.js:', e);
-                        document.getElementById('response').innerText = 'Erreur de lecture du flux vidéo';
-                    });
-                });
-                videoSystem.hls.on(Hls.Events.ERROR, (event, data) => {
-                    console.error('Erreur hls.js:', data);
-                    document.getElementById('response').innerText = `Erreur HLS: ${data.type} - ${data.details}`;
-                    if (data.fatal) {
-                        switch (data.type) {
-                            case Hls.ErrorTypes.NETWORK_ERROR:
-                                console.warn('Tentative de rechargement du flux...');
-                                videoSystem.hls.startLoad();
-                                break;
-                            case Hls.ErrorTypes.MEDIA_ERROR:
-                                console.warn('Tentative de récupération d\'erreur média...');
-                                videoSystem.hls.recoverMediaError();
-                                break;
-                            default:
-                                console.error('Erreur fatale, destruction du flux HLS');
-                                videoSystem.hls.destroy();
-                                break;
-                        }
-                    }
-                });
-            }
-        }
-
-    function seekToLive() {
-        if (videoSystem && videoSystem.hls) {
-            const livePosition = videoSystem.hls.liveSyncPosition;
-            if (livePosition !== undefined && livePosition !== null) {
-                videoSystem.player.currentTime = livePosition;
-                videoSystem.player.play().catch(e => {
-                    console.error('Erreur lors du retour en direct:', e);
-                    document.getElementById('response').innerText = 'Erreur lors du retour en direct';
-                });
-            } else {
-                console.error('La position live n\'est pas disponible');
-                document.getElementById('response').innerText = 'La position live n\'est pas disponible';
-            }
-        }
-    }
-
-        document.addEventListener('DOMContentLoaded', function() {
-            videoSystem = initVideoPlayer();
-            const socket = io(backendUrl, {
-                path: '/socket.io',
-                transports: ['websocket'],
-                reconnectionAttempts: 5,
-                reconnectionDelay: 1000
-            });
-
-            socket.on('connect', () => {
-                console.log('WebSocket connecté');
-                checkCurrentSession();
-            });
-
-            socket.on('connect_error', (error) => {
-                console.error('Erreur de connexion WebSocket:', error);
-                document.getElementById('response').innerText = 'Erreur de connexion WebSocket';
-            });
-
-            socket.on('new_question', (data) => {
-                const questionsDiv = document.getElementById('questions');
-                const questionHtml = `
-                    <div class="card mb-2">
-                        <div class="card-body">
-                            <p><strong>Question :</strong> ${data.question_text} 
-                               <small>(${new Date(data.timestamp).toLocaleString()})</small></p>
-                            ${data.answer_text ? `<p><strong>Réponse :</strong> ${data.answer_text}</p>` : ''}
-                        </div>
-                    </div>
-                `;
-                questionsDiv.insertAdjacentHTML('beforeend', questionHtml);
-            });
-
-            socket.on('new_answer', (data) => {
-                const questionsDiv = document.getElementById('questions');
-                const questionElements = questionsDiv.querySelectorAll('.card-body');
-                questionElements.forEach(element => {
-                    if (element.textContent.includes(data.question_text)) {
-                        const answerHtml = `<p><strong>Réponse :</strong> ${data.answer_text}</p>`;
-                        element.insertAdjacentHTML('beforeend', answerHtml);
-                    }
-                });
-            });
-
-            socket.on('new_quiz', (data) => {
-                const alreadyAnswered = checkQuizHistory(data.id);
-                currentQuizId = data.id;
-                
-                document.getElementById('quiz-question').innerText = data.question;
-                const optionsList = document.getElementById('quiz-options');
-                optionsList.innerHTML = '';
-                
-                data.options.forEach((option, index) => {
-                    const li = document.createElement('li');
-                    li.innerText = option;
-                    li.tabIndex = 0;
-                    
-                    if (!alreadyAnswered) {
-                        li.onclick = () => sendQuizResponse(data.id, index);
-                        li.onkeypress = (e) => {
-                            if (e.key === 'Enter') sendQuizResponse(data.id, index);
-                        };
-                    } else {
-                        li.style.pointerEvents = 'none';
-                        li.style.opacity = '0.6';
-                        li.style.cursor = 'not-allowed';
-                    }
-                    
-                    optionsList.appendChild(li);
-                });
-                
-                if (alreadyAnswered) {
-                    document.getElementById('response').innerText = 'Vous avez déjà répondu à ce quiz';
-                } else {
-                    document.getElementById('response').innerText = '';
-                }
-            });
-
-            socket.on('session_status_changed', (data) => {
-                if (data.status === 'live') {
-                    checkCurrentSession();
-                } else if (data.status === 'ended') {
-                    document.getElementById('response').innerText = 'La session a été terminée';
-                    if (videoSystem && videoSystem.hls) {
-                        videoSystem.hls.destroy();
-                    }
-                }
-            });
-
-            function checkCurrentSession() {
-                fetch(`${backendUrl}/api/sessions/current`)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data && data.id) {
-                            if (sessionId !== data.id) {
-                                sessionId = data.id;
-                                socket.emit('join_session', { session_id: sessionId });
-                                if (videoSystem) {
-                                    loadHlsVideo(data.hls_url, videoSystem);
-                                }
-                                fetchQuizzes(data.id);
-                            }
-                        } else {
-                            sessionId = null;
-                            if (videoSystem && videoSystem.hls) {
-                                videoSystem.hls.destroy();
-                            }
-                            document.getElementById('response').innerText = 'Aucune session en direct';
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Erreur API:', error);
-                        document.getElementById('response').innerText = 'Erreur lors de la vérification de la session';
-                    });
-            }
-
-            function fetchQuizzes(id) {
-                fetch(`${backendUrl}/api/sessions/${id}/quizzes`)
-                    .then(response => response.json())
-                    .then(quizzes => {
-                        if (quizzes.length > 0) {
-                            const quiz = quizzes[quizzes.length - 1];
-                            const alreadyAnswered = checkQuizHistory(quiz.id);
-                            currentQuizId = quiz.id;
-                            
-                            document.getElementById('quiz-question').innerText = quiz.question;
-                            const optionsList = document.getElementById('quiz-options');
-                            optionsList.innerHTML = '';
-                            
-                            quiz.options.forEach((option, index) => {
-                                const li = document.createElement('li');
-                                li.innerText = option;
-                                li.tabIndex = 0;
-                                
-                                if (alreadyAnswered) {
-                                    li.style.pointerEvents = 'none';
-                                    li.style.cursor = 'not-allowed';
-                                    if (index === quiz.correct_answer) {
-                                        li.classList.add('correct-answer');
-                                    }
-                                } else {
-                                    li.onclick = () => sendQuizResponse(quiz.id, index);
-                                    li.onkeypress = (e) => {
-                                        if (e.key === 'Enter') sendQuizResponse(quiz.id, index);
-                                    };
-                                }
-                                
-                                optionsList.appendChild(li);
-                            });
-                            
-                            if (alreadyAnswered) {
-                                document.getElementById('response').innerText = 'Vous avez déjà répondu à ce quiz';
-                            }
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Erreur quizzes:', error);
-                        document.getElementById('response').innerText = 'Erreur lors du chargement des quizzes';
-                    });
-            }
-
-            function sendQuestion() {
-                const questionInput = document.getElementById('question-input').value;
-                if (questionInput && sessionId) {
-                    socket.emit('question', {
-                        session_id: sessionId,
-                        question_text: questionInput
-                    });
-                    document.getElementById('question-input').value = '';
-                    document.getElementById('response').innerText = 'Question envoyée !';
-                }
-            }
-
-            checkCurrentSession();
-            setInterval(checkCurrentSession, 10000);
-
-            window.sendQuestion = sendQuestion;
-            window.seekToLive = seekToLive;
-        });
-    </script>
+    <script src="/static/js/hbbtv_index.js"></script>
 </body>
 </html>

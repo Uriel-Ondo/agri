@@ -6,7 +6,7 @@ from flask import Flask
 from config import Config
 from extensions import db, migrate, login_manager, socketio, api_bp, init_redis
 from models import User
-from routes import auth_bp, admin_bp, sessions_bp, quizzes_bp, main_bp
+from routes import auth_bp, admin_bp, sessions_bp, quizzes_bp, main_bp, queue_bp
 from api import namespaces
 from apscheduler.schedulers.background import BackgroundScheduler
 from routes.sessions import check_expired_sessions
@@ -41,6 +41,7 @@ def create_app():
     app.register_blueprint(quizzes_bp)
     app.register_blueprint(main_bp)
     app.register_blueprint(api_bp)
+    app.register_blueprint(queue_bp)
 
     # Charger les namespaces de l'API
     namespaces.load_namespaces()

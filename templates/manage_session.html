@@ -2,156 +2,212 @@
 {% block title %}Gérer la session{% endblock %}
 {% block content %}
 <div class="session-management">
-    <div class="session-info-card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h3><i class="bi bi-gear"></i> Gérer la session : {{ session.title }}</h3>
-            {% if current_user.id == session.user_id or current_user.role == 'admin' %}
-            <form method="POST">
-                <button type="submit" name="delete_session" class="btn btn-danger" 
-                        onclick="return confirm('Êtes-vous sûr de vouloir supprimer cette session ?')">
-                    <i class="bi bi-trash"></i> Supprimer
+    <div class="accordion" id="sessionAccordion">
+        <!-- Section Informations de la session -->
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="sessionInfoHeading">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#sessionInfoCollapse" aria-expanded="false" aria-controls="sessionInfoCollapse">
+                    <i class="fa-solid fa-cog me-2"></i> Informations de la session
                 </button>
-            </form>
-            {% endif %}
-        </div>
-        <div class="card-body">
-            <div class="session-details">
-                <p class="mb-3">{{ session.description }}</p>
-                <p><i class="bi bi-person"></i> <strong>Expert :</strong> {{ session.user.username }}</p>
-                <p><i class="bi bi-info-circle"></i> <strong>Statut :</strong> 
-                <!-- Ajout des dates ici -->
-                <p><i class="bi bi-calendar-event"></i> <strong>Début :</strong> {{ session.start_time.strftime('%d/%m/%Y %H:%M') }}</p>
-                <p><i class="bi bi-calendar-check"></i> <strong>Fin :</strong> {{ session.end_time.strftime('%d/%m/%Y %H:%M') }}</p>
-                <!-- Fin de l'ajout -->
-                    <span class="badge bg-{% if session.status == 'scheduled' %}info{% elif session.status == 'live' %}success{% else %}secondary{% endif %}">
-                        {{ session.status }}
-                    </span>
-                </p>
-                
-                {% if session.status == 'scheduled' %}
-                    <form method="POST" class="mb-3">
-                        <button type="submit" name="start" class="btn btn-success">
-                            <i class="bi bi-play-circle"></i> Démarrer la session
-                        </button>
-                    </form>
-                {% elif session.status == 'live' %}
-                    <div class="streaming-guide">
-                        <h5><i class="bi bi-broadcast"></i> Instructions de diffusion</h5>
-                        <p><strong>URL RTMP :</strong> <code>{{ rtmp_url }}</code></p>
-                        <p><strong>URL HLS :</strong> <code>{{ hls_url }}</code></p> 
-                        <p>Pour diffuser votre session en direct avec OBS Studio :</p>
-                        <ol>
-                            <li>Ouvrez OBS Studio</li>
-                            <li>Allez dans "Paramètres" > "Stream(flux) "</li>
-                            <li>Sélectionnez "Custom(Personalisé...)" comme service</li>
-                            <li>Serveur > Entrez l'URL RTMP: "ex(rtmp://localhost:1935/live/)" </li>
-                            <li>Clé de stream > Entrez le code stream: ex(session_cec7963f) </li>
-                            <li>Cliquez sur "Appliquer"</li>
-                            <li>Cliquez sur "OK"</li>
-                            <li>Cliquez sur "Commencer le streaming"</li>
-                        </ol>
-                    </div>
-                    
-                    <form method="POST" class="mb-3">
-                        <button type="submit" name="stop" class="btn btn-danger">
-                            <i class="bi bi-stop-circle"></i> Arrêter la session
-                        </button>
-                    </form>
-                {% endif %}
-                
-                <a href="{{ url_for('quizzes.create_quiz', session_id=session.id) }}" class="btn btn-primary">
-                    <i class="bi bi-plus-circle"></i> Créer un quiz
-                </a>
-            </div>
-        </div>
-    </div>
-
-    <div class="questions-section">
-        <h3><i class="bi bi-question-circle"></i> Questions des agriculteurs</h3>
-        <div id="questions-container" class="scrollable-container" data-min-items="3">
-            <div id="questions">
-                {% for question in questions %}
-                    <div class="question-card card mb-2" data-question-id="{{ question.id }}">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between">
-                                <div>
-                                    <p class="mb-1"><strong>Question :</strong> {{ question.question_text }}</p>
-                                    <small class="text-muted">{{ question.timestamp.strftime('%d/%m/%Y %H:%M') }}</small>
-                                </div>
-                                {% if not question.answer_text %}
-                                    <span class="badge bg-warning text-dark">En attente</span>
-                                {% endif %}
-                            </div>
-                            
-                            {% if question.answer_text %}
-                                <div class="mt-2 p-2 bg-light rounded">
-                                    <p class="mb-0"><strong>Réponse :</strong> {{ question.answer_text }}</p>
-                                </div>
-                            {% else %}
-                                <form method="POST" class="answer-form mt-2">
-                                    <input type="hidden" name="question_id" value="{{ question.id }}">
-                                    <div class="mb-2">
-                                        <textarea class="form-control" name="answer_text" placeholder="Votre réponse..." rows="2"></textarea>
-                                    </div>
-                                    <button type="submit" name="answer" class="btn btn-sm btn-primary">
-                                        <i class="bi bi-send"></i> Répondre
-                                    </button>
-                                </form>
+            </h2>
+            <div id="sessionInfoCollapse" class="accordion-collapse collapse" aria-labelledby="sessionInfoHeading" data-bs-parent="#sessionAccordion">
+                <div class="accordion-body">
+                    <div class="session-info-card card card-float">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h3><i class="bi bi-gear"></i> Gérer la session : {{ session.title }}</h3>
+                            {% if current_user.id == session.user_id or current_user.role == 'admin' %}
+                            <form method="POST">
+                                <button type="submit" name="delete_session" class="btn btn-danger btn-sm btn-pulse" data-bs-toggle="tooltip" title="Supprimer la session" onclick="return confirm('Êtes-vous sûr de vouloir supprimer cette session ?')">
+                                    <i class="fa-solid fa-trash"></i> Supprimer
+                                </button>
+                            </form>
                             {% endif %}
                         </div>
-                    </div>
-                {% endfor %}
-            </div>
-        </div>
-    </div>
-
-    <div class="quizzes-section">
-        <h3><i class="bi bi-patch-question"></i> Quizzes</h3>
-        <div id="quizzes-container" class="scrollable-container" data-min-items="2">
-            <div id="quizzes">
-                {% for quiz in quizzes %}
-                    <div class="quiz-card card mb-3" data-quiz-id="{{ quiz.id }}">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <div>
-                                    <h5>{{ quiz.question }}</h5>
-                                    <small class="text-muted">{{ quiz.timestamp.strftime('%d/%m/%Y %H:%M') }}</small>
-                                    
-                                    <ul class="quiz-options mt-2">
-                                        {% for option in quiz.options %}
-                                            <li class="{% if loop.index0 == quiz.correct_answer %}correct-answer{% endif %}">
-                                                {{ option }}
-                                            </li>
-                                        {% endfor %}
-                                    </ul>
-                                </div>
-                                
-                                {% if current_user.id == session.user_id or current_user.role == 'admin' %}
-                                <form method="POST" action="{{ url_for('quizzes.delete_quiz', session_id=session.id, quiz_id=quiz.id) }}">
-                                    <button type="submit" class="btn btn-sm btn-danger" 
-                                            onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce quiz ?')">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                </form>
+                        <div class="card-body session-scrollable">
+                            <div class="session-details mb-4">
+                                <p class="mb-3">{{ session.description }}</p>
+                                <p><i class="fa-solid fa-user"></i> <strong>Expert :</strong> {{ session.user.username }}</p>
+                                <p><i class="fa-solid fa-info-circle"></i> <strong>Statut :</strong> 
+                                    <span class="badge bg-{% if session.status == 'scheduled' %}info{% elif session.status == 'live' %}success{% else %}secondary{% endif %}">
+                                        {{ session.status }}
+                                    </span>
+                                </p>
+                                <p><i class="fa-solid fa-calendar-event"></i> <strong>Début :</strong> {{ session.start_time.strftime('%d/%m/%Y %H:%M') }}</p>
+                                <p><i class="fa-solid fa-calendar-check"></i> <strong>Fin :</strong> {{ session.end_time.strftime('%d/%m/%Y %H:%M') }}</p>
+                                {% if session.status == 'scheduled' %}
+                                    <form method="POST" class="mb-3">
+                                        <button type="submit" name="start" class="btn btn-success btn-pulse" data-bs-toggle="tooltip" title="Démarrer la session">
+                                            <i class="fa-solid fa-play"></i> Démarrer la session
+                                        </button>
+                                    </form>
+                                {% elif session.status == 'live' %}
+                                    <div class="streaming-guide card mb-4">
+                                        <div class="card-header">
+                                            <h5><i class="fa-solid fa-broadcast-tower"></i> Instructions de diffusion</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <p><strong>URL RTMP :</strong> <code>{{ rtmp_url }}</code></p>
+                                            <p><strong>URL HLS :</strong> <code>{{ hls_url }}</code></p> 
+                                            <p>Pour diffuser votre session en direct avec OBS Studio :</p>
+                                            <ol>
+                                                <li>Ouvrez OBS Studio</li>
+                                                <li>Allez dans "Paramètres" > "Stream(flux) "</li>
+                                                <li>Sélectionnez "Custom(Personalisé...)" comme service</li>
+                                                <li>Serveur > Entrez l'URL RTMP: "ex(rtmp://localhost:1935/live/)" </li>
+                                                <li>Clé de stream > Entrez le code stream: ex(session_cec7963f) </li>
+                                                <li>Cliquez sur "Appliquer"</li>
+                                                <li>Cliquez sur "OK"</li>
+                                                <li>Cliquez sur "Commencer le streaming"</li>
+                                            </ol>
+                                        </div>
+                                    </div>
+                                    <form method="POST" class="mb-3">
+                                        <button type="submit" name="stop" class="btn btn-danger btn-pulse" data-bs-toggle="tooltip" title="Arrêter la session">
+                                            <i class="fa-solid fa-stop"></i> Arrêter la session
+                                        </button>
+                                    </form>
                                 {% endif %}
-                            </div>
-                            
-                            <div id="quiz-results-{{ quiz.id }}" class="mt-3">
-                                <div class="spinner-border spinner-border-sm text-primary" role="status">
-                                    <span class="visually-hidden">Chargement...</span>
-                                </div>
-                                <span class="ms-2">Chargement des résultats...</span>
-                            </div>
-                            
-                            <div class="mt-2">
-                                <a href="{{ url_for('quizzes.quiz_results', session_id=session.id, quiz_id=quiz.id) }}" 
-                                   class="btn btn-sm btn-info">
-                                    <i class="bi bi-bar-chart"></i> Résultats détaillés
+                                <a href="{{ url_for('quizzes.create_quiz', session_id=session.id) }}" class="btn btn-primary btn-pulse" data-bs-toggle="tooltip" title="Créer un quiz">
+                                    <i class="fa-solid fa-plus"></i> Créer un quiz
                                 </a>
                             </div>
                         </div>
                     </div>
-                {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Section File d'attente -->
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="queueHeading">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#queueCollapse" aria-expanded="false" aria-controls="queueCollapse">
+                    <i class="fa-solid fa-users me-2"></i> File d'attente des spectateurs
+                </button>
+            </h2>
+            <div id="queueCollapse" class="accordion-collapse collapse" aria-labelledby="queueHeading" data-bs-parent="#sessionAccordion">
+                <div class="accordion-body">
+                    <div class="queue-section card card-float">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h3>File d'attente</h3>
+                            <button id="toggle-qr-btn" class="btn btn-primary btn-pulse" data-bs-toggle="tooltip" title="Afficher/Masquer le QR Code">
+                                <i class="fa-solid fa-qrcode"></i> Afficher QR Code
+                            </button>
+                        </div>
+                        <div class="card-body session-scrollable" id="queue-list">
+                            <p>Chargement de la file d'attente...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section Questions des agriculteurs -->
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="questionsHeading">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#questionsCollapse" aria-expanded="false" aria-controls="questionsCollapse">
+                    <i class="fa-solid fa-question-circle me-2"></i> Questions des agriculteurs
+                </button>
+            </h2>
+            <div id="questionsCollapse" class="accordion-collapse collapse" aria-labelledby="questionsHeading" data-bs-parent="#sessionAccordion">
+                <div class="accordion-body">
+                    <div class="questions-section card card-float">
+                        <div class="card-header">
+                            <h3>Questions des agriculteurs</h3>
+                        </div>
+                        <div class="card-body questions-scrollable" id="questions">
+                            {% for question in questions %}
+                            <div class="question-card card mb-3 question-slide" data-question-id="{{ question.id }}">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between">
+                                        <div>
+                                            <p class="mb-1"><strong>Question :</strong> {{ question.question_text }}</p>
+                                            <small class="text-muted">{{ question.timestamp.strftime('%d/%m/%Y %H:%M') }}</small>
+                                        </div>
+                                        {% if not question.answer_text %}
+                                        <span class="badge bg-warning text-dark">En attente</span>
+                                        {% endif %}
+                                    </div>
+                                    {% if question.answer_text %}
+                                    <div class="mt-2 p-2 bg-light rounded">
+                                        <p class="mb-0"><strong>Réponse :</strong> {{ question.answer_text }}</p>
+                                    </div>
+                                    {% else %}
+                                    <form method="POST" class="answer-form mt-2" onsubmit="return submitAnswerForm(event, this)">
+                                        <input type="hidden" name="question_id" value="{{ question.id }}">
+                                        <div class="mb-2">
+                                            <textarea class="form-control answer-textarea" name="answer_text" placeholder="Votre réponse..." rows="2" required></textarea>
+                                        </div>
+                                        <button type="submit" name="answer" class="btn btn-sm btn-primary btn-pulse" data-bs-toggle="tooltip" title="Répondre à la question">
+                                            <i class="fa-solid fa-send"></i> Répondre
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section Quizzes -->
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="quizzesHeading">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#quizzesCollapse" aria-expanded="false" aria-controls="quizzesCollapse">
+                    <i class="fa-solid fa-poll me-2"></i> Quizzes
+                </button>
+            </h2>
+            <div id="quizzesCollapse" class="accordion-collapse collapse" aria-labelledby="quizzesHeading" data-bs-parent="#sessionAccordion">
+                <div class="accordion-body">
+                    <div class="quizzes-section card card-float">
+                        <div class="card-header">
+                            <h3>Quizzes</h3>
+                        </div>
+                        <div class="card-body quizzes-scrollable" id="quizzes">
+                            {% for quiz in quizzes %}
+                            <div class="quiz-card card mb-3 quiz-slide" data-quiz-id="{{ quiz.id }}">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <h5>{{ quiz.question }}</h5>
+                                            <small class="text-muted">{{ quiz.timestamp.strftime('%d/%m/%Y %H:%M') }}</small>
+                                            <ul class="quiz-options mt-2">
+                                                {% for option in quiz.options %}
+                                                <li class="{% if loop.index0 == quiz.correct_answer %}text-success{% endif %}">{{ option }}</li>
+                                                {% endfor %}
+                                            </ul>
+                                        </div>
+                                        {% if current_user.id == session.user_id or current_user.role == 'admin' %}
+                                        <div class="d-flex flex-column">
+                                            <form method="POST" action="{{ url_for('quizzes.delete_quiz', session_id=session.id, quiz_id=quiz.id) }}">
+                                                <button type="submit" class="btn btn-sm btn-danger btn-pulse mb-2" data-bs-toggle="tooltip" title="Supprimer le quiz" onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce quiz ?')">
+                                                    <i class="fa-solid fa-trash"></i>
+                                                </button>
+                                            </form>
+                                            <button class="btn btn-sm btn-warning btn-pulse toggle-results-btn" data-quiz-id="{{ quiz.id }}" data-bs-toggle="tooltip" title="Afficher/Masquer les résultats sur HbbTV">
+                                                <i class="fa-solid fa-eye"></i> Afficher résultats
+                                            </button>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <div id="quiz-results-{{ quiz.id }}" class="mt-3">
+                                        <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                            <span class="visually-hidden">Chargement...</span>
+                                        </div>
+                                        <span class="ms-2">Chargement des résultats...</span>
+                                    </div>
+                                    <div class="mt-2">
+                                        <a href="{{ url_for('quizzes.quiz_results', session_id=session.id, quiz_id=quiz.id) }}" class="btn btn-sm btn-info btn-pulse" data-bs-toggle="tooltip" title="Voir les résultats détaillés">
+                                            <i class="fa-solid fa-chart-bar"></i> Résultats détaillés
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -164,7 +220,7 @@
         initScrollableContainers();
         
         const sessionId = {{ session.id }};
-        const socket = io('http://localhost:5000', {
+        const socket = io(window.location.origin, {
             path: '/socket.io',
             transports: ['websocket'],
             reconnectionAttempts: 5,
@@ -174,6 +230,7 @@
         socket.on('connect', () => {
             console.log('WebSocket connected');
             socket.emit('join_session', { session_id: sessionId });
+            fetchQueue();
         });
 
         socket.on('connect_error', (error) => {
@@ -181,39 +238,53 @@
             alert('Erreur de connexion WebSocket: ' + error.message);
         });
 
+        socket.on('queue_updated', (data) => {
+            fetchQueue();
+        });
+
+        socket.on('spectator_approved', (data) => {
+            fetchQueue();
+        });
+
+        socket.on('spectator_stream_stopped', (data) => {
+            fetchQueue();
+        });
+
         socket.on('new_question', function(data) {
-            const existingQuestion = document.querySelector(`.card[data-question-id="${data.question_id}"]`);
+            const existingQuestion = document.querySelector(`.question-slide[data-question-id="${data.question_id}"]`);
             if (!existingQuestion) {
                 const questionsDiv = document.getElementById('questions');
                 const questionHtml = `
-                    <div class="card mb-2" data-question-id="${data.question_id}">
+                    <div class="card mb-3 question-slide" data-question-id="${data.question_id}">
                         <div class="card-body">
                             <div class="d-flex justify-content-between">
                                 <div>
                                     <p class="mb-1"><strong>Question :</strong> ${data.question_text}</p>
-                                    <small class="text-muted">${new Date(data.timestamp).toLocaleString()}</small>
+                                    <small class="text-muted">${new Date(data.timestamp).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</small>
                                 </div>
                                 <span class="badge bg-warning text-dark">En attente</span>
                             </div>
-                            <form method="POST" class="answer-form mt-2">
+                            <form method="POST" class="answer-form mt-2" onsubmit="return submitAnswerForm(event, this)">
                                 <input type="hidden" name="question_id" value="${data.question_id}">
                                 <div class="mb-2">
-                                    <textarea class="form-control" name="answer_text" placeholder="Votre réponse..." rows="2"></textarea>
+                                    <textarea class="form-control answer-textarea" name="answer_text" placeholder="Votre réponse..." rows="2" required></textarea>
                                 </div>
-                                <button type="submit" name="answer" class="btn btn-sm btn-primary">
-                                    <i class="bi bi-send"></i> Répondre
+                                <button type="submit" name="answer" class="btn btn-sm btn-primary btn-pulse" data-bs-toggle="tooltip" title="Répondre à la question">
+                                    <i class="fa-solid fa-send"></i> Répondre
                                 </button>
                             </form>
                         </div>
                     </div>
                 `;
                 questionsDiv.insertAdjacentHTML('afterbegin', questionHtml);
-                updateScrollableContainer('questions-container');
+                updateScrollableContainer('questions');
+                const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+                tooltipTriggerList.forEach(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
             }
         });
 
         socket.on('new_answer', function(data) {
-            const questionElements = document.querySelectorAll(`.card[data-question-id="${data.question_id}"] .card-body`);
+            const questionElements = document.querySelectorAll(`.question-slide[data-question-id="${data.question_id}"] .card-body`);
             questionElements.forEach(element => {
                 const form = element.querySelector('form');
                 if (form) {
@@ -224,8 +295,6 @@
                         </div>
                     `;
                     element.insertAdjacentHTML('beforeend', answerHtml);
-                    
-                    // Mettre à jour le badge
                     const badge = element.querySelector('.badge');
                     if (badge) badge.remove();
                 }
@@ -233,28 +302,32 @@
         });
 
         socket.on('new_quiz', function(data) {
-            const existingQuiz = document.querySelector(`.card[data-quiz-id="${data.id}"]`);
+            const existingQuiz = document.querySelector(`.quiz-slide[data-quiz-id="${data.id}"]`);
             if (!existingQuiz) {
                 const quizzesDiv = document.getElementById('quizzes');
                 const optionsHtml = data.options.map((opt, index) => 
-                    `<li class="${index === data.correct_answer ? 'correct-answer' : ''}">${opt}</li>`
+                    `<li class="${index === data.correct_answer ? 'text-success' : ''}">${opt}</li>`
                 ).join('');
                 
                 const quizHtml = `
-                    <div class="quiz-card card mb-3" data-quiz-id="${data.id}">
+                    <div class="quiz-card card mb-3 quiz-slide" data-quiz-id="${data.id}">
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-start">
                                 <div>
                                     <h5>${data.question}</h5>
-                                    <small class="text-muted">${new Date(data.timestamp).toLocaleString()}</small>
+                                    <small class="text-muted">${new Date(data.timestamp).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</small>
                                     <ul class="quiz-options mt-2">${optionsHtml}</ul>
                                 </div>
-                                <form method="POST" action="/session/${sessionId}/quiz/${data.id}/delete">
-                                    <button type="submit" class="btn btn-sm btn-danger" 
-                                            onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce quiz ?')">
-                                        <i class="bi bi-trash"></i>
+                                <div class="d-flex flex-column">
+                                    <form method="POST" action="/session/${sessionId}/quiz/${data.id}/delete">
+                                        <button type="submit" class="btn btn-sm btn-danger btn-pulse mb-2" data-bs-toggle="tooltip" title="Supprimer le quiz" onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce quiz ?')">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </form>
+                                    <button class="btn btn-sm btn-warning btn-pulse toggle-results-btn" data-quiz-id="${data.id}" data-bs-toggle="tooltip" title="Afficher/Masquer les résultats sur HbbTV">
+                                        <i class="fa-solid fa-eye"></i> Afficher résultats
                                     </button>
-                                </form>
+                                </div>
                             </div>
                             <div id="quiz-results-${data.id}" class="mt-3">
                                 <div class="spinner-border spinner-border-sm text-primary" role="status">
@@ -263,17 +336,18 @@
                                 <span class="ms-2">Chargement des résultats...</span>
                             </div>
                             <div class="mt-2">
-                                <a href="/session/${sessionId}/quiz/${data.id}/results" 
-                                   class="btn btn-sm btn-info">
-                                    <i class="bi bi-bar-chart"></i> Résultats détaillés
+                                <a href="/session/${sessionId}/quiz/${data.id}/results" class="btn btn-sm btn-info btn-pulse" data-bs-toggle="tooltip" title="Voir les résultats détaillés">
+                                    <i class="fa-solid fa-chart-bar"></i> Résultats détaillés
                                 </a>
                             </div>
                         </div>
                     </div>
                 `;
                 quizzesDiv.insertAdjacentHTML('afterbegin', quizHtml);
-                updateScrollableContainer('quizzes-container');
+                updateScrollableContainer('quizzes');
                 fetchQuizResults(data.id);
+                const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+                tooltipTriggerList.forEach(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
             }
         });
 
@@ -288,60 +362,153 @@
             }
         });
 
-      function fetchQuizResults(quizId) {
-        fetch(`/api/session/${sessionId}/quiz/${quizId}/results`)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Erreur de chargement des résultats');
-                }
-                return response.json();
-            })
-            .then(data => {
-                const resultsDiv = document.getElementById(`quiz-results-${quizId}`);
-                if (resultsDiv) {
-                    let resultsHtml = '<div class="quiz-results">';
-                    
-                    if (data.results && Array.isArray(data.results)) {
-                        data.results.forEach((count, index) => {
-                            const percentage = data.total_responses > 0 
-                                ? Math.round((count / data.total_responses) * 100) 
-                                : 0;
-                            resultsHtml += `
-                                <div class="result-item mb-2">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <span class="option-text">${data.options[index]}</span>
-                                        <span class="option-stats">
-                                            <span class="option-count">${count}</span>
-                                            <span class="option-percentage">(${percentage}%)</span>
-                                        </span>
-                                    </div>
-                                    <div class="progress mt-1" style="height: 8px;">
-                                        <div class="progress-bar" role="progressbar" 
-                                            style="width: ${percentage}%" 
-                                            aria-valuenow="${percentage}" 
-                                            aria-valuemin="0" 
-                                            aria-valuemax="100">
+        function fetchQueue() {
+            fetch(`/api/queue/${sessionId}/spectators`)
+                .then(response => response.json())
+                .then(data => {
+                    const queueList = document.getElementById('queue-list');
+                    if (data.length === 0) {
+                        queueList.innerHTML = '<p>Aucun spectateur dans la file d\'attente</p>';
+                        return;
+                    }
+                    let html = '<ul class="list-group">';
+                    data.forEach(spectator => {
+                        html += `
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>Spectateur ${spectator.spectator_id} (${spectator.status})</span>
+                                <div>
+                                    ${spectator.status === 'pending' ? `
+                                    <button class="btn btn-sm btn-success btn-pulse approve-spectator" data-spectator-id="${spectator.spectator_id}" data-bs-toggle="tooltip" title="Approuver le spectateur">
+                                        <i class="fa-solid fa-check"></i> Approuver
+                                    </button>
+                                    <button class="btn btn-sm btn-danger btn-pulse reject-spectator" data-spectator-id="${spectator.spectator_id}" data-bs-toggle="tooltip" title="Refuser le spectateur">
+                                        <i class="fa-solid fa-times"></i> Refuser
+                                    </button>
+                                    ` : ''}
+                                    ${spectator.status === 'approved' || spectator.status === 'streaming' ? `
+                                    <button class="btn btn-sm btn-danger btn-pulse stop-spectator" data-spectator-id="${spectator.spectator_id}" data-bs-toggle="tooltip" title="Arrêter la diffusion">
+                                        <i class="fa-solid fa-stop"></i> Arrêter
+                                    </button>
+                                    ` : ''}
+                                </div>
+                            </li>
+                        `;
+                    });
+                    html += '</ul>';
+                    queueList.innerHTML = html;
+                    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+                    tooltipTriggerList.forEach(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+                });
+        }
+
+        document.getElementById('toggle-qr-btn').addEventListener('click', () => {
+            const isVisible = document.getElementById('toggle-qr-btn').textContent.includes('Afficher');
+            fetch(`/api/queue/${sessionId}/toggle_qr`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ show: isVisible })
+            }).then(response => response.json()).then(data => {
+                document.getElementById('toggle-qr-btn').innerHTML = data.show ?
+                    '<i class="fa-solid fa-qrcode"></i> Masquer QR Code' :
+                    '<i class="fa-solid fa-qrcode"></i> Afficher QR Code';
+                socket.emit('toggle_qr_code', { session_id: sessionId, show: data.show });
+            });
+        });
+
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.approve-spectator')) {
+                const spectatorId = e.target.closest('.approve-spectator').dataset.spectatorId;
+                fetch(`/api/queue/${sessionId}/spectator/${spectatorId}/approve`, { method: 'POST' })
+                    .then(() => {
+                        fetchQueue();
+                        socket.emit('spectator_approved', { session_id: sessionId, spectator_id: spectatorId });
+                    });
+            }
+            if (e.target.closest('.reject-spectator')) {
+                const spectatorId = e.target.closest('.reject-spectator').dataset.spectatorId;
+                fetch(`/api/queue/${sessionId}/spectator/${spectatorId}/reject`, { method: 'POST' })
+                    .then(() => fetchQueue());
+            }
+            if (e.target.closest('.stop-spectator')) {
+                const spectatorId = e.target.closest('.stop-spectator').dataset.spectatorId;
+                fetch(`/api/queue/${sessionId}/spectator/${spectatorId}/stop`, { method: 'POST' })
+                    .then(() => {
+                        fetchQueue();
+                        socket.emit('spectator_stream_stopped', { session_id: sessionId, spectator_id: spectatorId });
+                    });
+            }
+        });
+
+        function fetchQuizResults(quizId) {
+            fetch(`/api/session/${sessionId}/quiz/${quizId}/results`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Erreur de chargement des résultats');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    const resultsDiv = document.getElementById(`quiz-results-${quizId}`);
+                    if (resultsDiv) {
+                        let resultsHtml = '<div class="quiz-results">';
+                        
+                        if (data.results && Array.isArray(data.results)) {
+                            data.results.forEach((count, index) => {
+                                const percentage = data.total_responses > 0 
+                                    ? Math.round((count / data.total_responses) * 100) 
+                                    : 0;
+                                resultsHtml += `
+                                    <div class="result-item mb-2">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span class="option-text">${data.options[index]}</span>
+                                            <span class="option-stats">
+                                                <span class="option-count">${count}</span>
+                                                <span class="option-percentage">(${percentage}%)</span>
+                                            </span>
+                                        </div>
+                                        <div class="progress mt-1" style="height: 8px;">
+                                            <div class="progress-bar" role="progressbar" 
+                                                style="width: ${percentage}%" 
+                                                aria-valuenow="${percentage}" 
+                                                aria-valuemin="0" 
+                                                aria-valuemax="100">
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            `;
-                        });
-                    } else {
-                        resultsHtml += '<div class="text-danger">Aucun résultat disponible</div>';
+                                `;
+                            });
+                        } else {
+                            resultsHtml += '<div class="text-danger">Aucun résultat disponible</div>';
+                        }
+                        
+                        resultsHtml += '</div>';
+                        resultsDiv.innerHTML = resultsHtml;
                     }
-                    
-                    resultsHtml += '</div>';
-                    resultsDiv.innerHTML = resultsHtml;
-                }
-            })
-            .catch(error => {
-                console.error('Erreur lors de la récupération des résultats:', error);
-                const resultsDiv = document.getElementById(`quiz-results-${quizId}`);
-                if (resultsDiv) {
-                    resultsDiv.innerHTML = `<div class="text-danger">Erreur de chargement des résultats</div>`;
-                }
-            });
-    }
+                })
+                .catch(error => {
+                    console.error('Erreur lors de la récupération des résultats:', error);
+                    const resultsDiv = document.getElementById(`quiz-results-${quizId}`);
+                    if (resultsDiv) {
+                        resultsDiv.innerHTML = `<div class="text-danger">Erreur de chargement des résultats</div>`;
+                    }
+                });
+        }
+
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.toggle-results-btn')) {
+                const btn = e.target.closest('.toggle-results-btn');
+                const quizId = btn.dataset.quizId;
+                const isVisible = btn.textContent.includes('Afficher');
+                socket.emit('toggle_quiz_results', {
+                    session_id: sessionId,
+                    quiz_id: quizId,
+                    show: isVisible
+                });
+                btn.innerHTML = isVisible ?
+                    '<i class="fa-solid fa-eye-slash"></i> Masquer résultats' :
+                    '<i class="fa-solid fa-eye"></i> Afficher résultats';
+            }
+        });
 
         // Mettre à jour périodiquement les résultats des quizzes
         setInterval(() => {
@@ -379,6 +546,72 @@
                 container.style.overflowY = '';
             }
         }
+
+        // Validation du formulaire de réponse
+        function validateAnswerForm(form) {
+            const textarea = form.querySelector('textarea[name="answer_text"]');
+            const text = textarea.value.trim();
+            if (!text) {
+                alert('Veuillez entrer une réponse non vide.');
+                return false;
+            }
+            return true;
+        }
+
+        // Soumission du formulaire de réponse via AJAX
+        function submitAnswerForm(event, form) {
+            event.preventDefault();
+            if (!validateAnswerForm(form)) return false;
+
+            const formData = new FormData(form);
+            const questionId = formData.get('question_id');
+            const answerText = formData.get('answer_text');
+
+            fetch(`/api/session/${sessionId}/answer`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Erreur HTTP ${response.status}: ${response.statusText}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                const questionElements = document.querySelectorAll(`.question-slide[data-question-id="${questionId}"] .card-body`);
+                questionElements.forEach(element => {
+                    const form = element.querySelector('form');
+                    if (form) {
+                        form.remove();
+                        const answerHtml = `<div class="mt-2 p-2 bg-light rounded"><p class="mb-0"><strong>Réponse :</strong> ${answerText}</p></div>`;
+                        element.insertAdjacentHTML('beforeend', answerHtml);
+                        const badge = element.querySelector('.badge.bg-warning');
+                        if (badge) badge.remove();
+                    }
+                });
+                socket.emit('new_answer', {
+                    session_id: sessionId,
+                    question_id: questionId,
+                    answer_text: answerText
+                });
+            })
+            .catch(error => {
+                console.error('Erreur lors de la soumission de la réponse:', error);
+                alert('Erreur lors de la soumission de la réponse: ' + error.message);
+            });
+
+            return false;
+        }
+
+        // Initialisation des tooltips
+        const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+        tooltipTriggerList.forEach(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+
+        // Charger les résultats initiaux pour les quizzes visibles
+        document.querySelectorAll('[id^="quiz-results-"]').forEach(el => {
+            const quizId = el.id.split('-')[2];
+            fetchQuizResults(quizId);
+        });
     });
 </script>
 

@@ -59,20 +59,81 @@
 
         /* Conteneur Vidéo */
         #video-container {
-            height: 70%;
+            height: 100%;
             display: flex;
             flex-direction: column;
-            background-color: var(--video-bg); /* Changé de var(--card-bg) à var(--video-bg) */
+            background-color: var(--video-bg, #1a1a1a);
             padding: 5px;
+            box-sizing: border-box;
         }
 
-        #video-player {
+        .video-wrapper {
+            display: flex;
+            flex-direction: row;
             width: 100%;
-            height: calc(100% - 40px);
-            background: var(--video-bg); /* Changé de #000 à var(--video-bg) */
-            object-fit: contain; /* Garde le ratio vidéo sans déformation */
+            height: calc(70% - 60px);
+            gap: 10px;
+            overflow: hidden;
         }
 
+        .video-player {
+            background: #000;
+            border-radius: 4px;
+            object-fit: contain;
+        }
+
+        .main-video {
+            width: 100%;
+            height: 100%;
+            flex: 1;
+        }
+
+        .video-wrapper:has(#spectator-video-container[style*="display: block"]) .main-video {
+            width: 50%;
+            flex: 0 0 50%;
+        }
+
+        .spectator-video {
+            width: 100%;
+            height: 100%;
+            flex: 1;
+        }
+
+        #spectator-video-container {
+            display: none;
+            width: 50%;
+            flex: 0 0 50%;
+        }
+
+        #spectator-video-container[style*="display: block"] {
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .loading-message {
+            display: none;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            font-size: 1.2em;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 10;
+            border-radius: 4px;
+        }
+
+        #spectator-video-container[style*="display: block"] .loading-message {
+            display: flex;
+        }
+
+        
         #live-button {
             height: 30px;
             margin-top: 5px;

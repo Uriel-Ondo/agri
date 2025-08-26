@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rejoindre la session - Agri</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/spectator.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="card card-float">
+            <div class="card-header">
+                <h3><i class="fa-solid fa-video"></i> Rejoindre la session en direct</h3>
+            </div>
+            <div class="card-body">
+                <div id="queue-position" class="alert alert-info"></div>
+                <div id="status-message" class="alert alert-info"></div>
+                <div id="video-container" style="display: none;">
+                    <video id="preview" class="video-player" muted playsinline></video>
+                    <div class="video-controls mt-3 d-flex gap-2 justify-content-center">
+                        <button id="approve-stream" class="btn btn-success btn-pulse" style="display: none;">
+                            <i class="fa-solid fa-check"></i> Accepter la diffusion
+                        </button>
+                        <button id="reject-stream" class="btn btn-danger btn-pulse" style="display: none;">
+                            <i class="fa-solid fa-times"></i> Refuser
+                        </button>
+                        <button id="stop-stream" class="btn btn-warning btn-pulse" style="display: none;">
+                            <i class="fa-solid fa-stop"></i> Arrêter la diffusion
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const socket = io(window.location.origin, {
+                path: '/socket.io',
+                transports: ['websocket'],
+                reconnectionAttempts: 5,
+                reconnectionDelay: 1000
+            });
+            const sessionId = "{{ session_id }}";
+            const spectatorId = "{{ spectator_id }}";
+            const statusMessage = document.getElementById('status-message');
+            const queuePosition = document.getElementById('queue-position');
+            const videoContainer = document.getElementById('video-container');
+            const preview = document.getElementById('preview');
+            const approveBtn = document.getElementById('approve-stream');
+            const rejectBtn = document.getElementById('reject-stream');
+            const stopBtn = document.getElementById('stop-stream');
+            let stream = null;
+            let peerConnection = null;
+
+            socket.on('connect', () => {
+                statusMessage.textContent = 'Connecté au serveur';
+                socket.emit('join_session', { session_id: sessionId });
+                if (spectatorId) {
+                    fetch('/api/queue/' + sessionId + '/join', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ spectator_id: spectatorId })
+                    }).then(response => response.json()).then(data => {
+                        updateQueuePosition();
+                    }).catch(error => {
+                        statusMessage.textContent = 'Erreur: ' + error.message;
+                    });
+                }
+            });
+
+            socket.on('queue_updated', (data) => {
+                if (data.spectator_id === spectatorId) {
+                    updateQueuePosition();
+                }
+            });
+
+            socket.on('spectator_approved', (data) => {
+                if (data.spectator_id === spectatorId) {
+                    statusMessage.textContent = 'Votre tour ! Veuillez accepter ou refuser la diffusion.';
+                    videoContainer.style.display = 'block';
+                    approveBtn.style.display = 'inline-block';
+                    rejectBtn.style.display = 'inline-block';
+                }
+            });
+
+            socket.on('spectator_stream_stopped', (data) => {
+                if (data.spectator_id === spectatorId) {
+                    stopStream();
+                    statusMessage.textContent = 'Votre diffusion a été arrêtée.';
+                    window.location.href = '/';
+                }
+            });
+
+            approveBtn.addEventListener('click', async () => {
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia({
+                        video: { 
+                            width: { ideal: 1280 }, 
+                            height: { ideal: 720 }, 
+                            frameRate: { ideal: 30 },
+                            facingMode: "user"
+                        },
+                        audio: true
+                    });
+                    preview.srcObject = stream;
+                    preview.play();
+                    startWebRTC();
+                    approveBtn.style.display = 'none';
+                    rejectBtn.style.display = 'none';
+                    stopBtn.style.display = 'inline-block';
+                } catch (error) {
+                    statusMessage.textContent = 'Erreur d\'accès à la caméra/micro: ' + error.message;
+                }
+            });
+
+            rejectBtn.addEventListener('click', () => {
+                fetch('/api/queue/' + sessionId + '/spectator/' + spectatorId + '/reject', { method: 'POST' })
+                    .then(() => {
+                        stopStream();
+                        statusMessage.textContent = 'Vous avez refusé la diffusion.';
+                        window.location.href = '/';
+                    });
+            });
+
+            stopBtn.addEventListener('click', () => {
+                fetch('/api/queue/' + sessionId + '/spectator/' + spectatorId + '/stop', { method: 'POST' })
+                    .then(() => {
+                        stopStream();
+                        statusMessage.textContent = 'Diffusion arrêtée.';
+                        window.location.href = '/';
+                    })
+                    .catch(error => {
+                        statusMessage.textContent = 'Erreur lors de l\'arrêt de la diffusion: ' + error.message;
+                    });
+            });
+
+            async function startWebRTC() {
+                try {
+                    peerConnection = new RTCPeerConnection({
+                        iceServers: [
+                            { urls: 'stun:stun.l.google.com:19302' },
+                            { urls: 'stun:stun1.l.google.com:19302' }
+                        ],
+                        sdpSemantics: 'unified-plan'
+                    });
+
+                    stream.getTracks().forEach(track => {
+                        peerConnection.addTrack(track, stream);
+                    });
+
+                    peerConnection.onicecandidate = (event) => {
+                        if (!event.candidate) {
+                            const offer = peerConnection.localDescription;
+                            console.log('Envoi de l\'offre SDP:', offer);
+                            fetch('/api/queue/' + sessionId + '/spectator/' + spectatorId + '/publish', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ sdp: offer })
+                            }).then(response => {
+                                if (!response.ok) {
+                                    throw new Error(`Erreur HTTP: ${response.status}`);
+                                }
+                                return response.json();
+                            }).then(data => {
+                                if (!data.sdp) {
+                                    throw new Error('No SDP in response');
+                                }
+                                console.log('Réponse SDP reçue:', data.sdp);
+                                if (typeof data.sdp !== 'object' || !data.sdp.type || !data.sdp.sdp) {
+                                    throw new Error('Réponse SDP invalide: format incorrect');
+                                }
+                                return peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
+                            }).then(() => {
+                                statusMessage.textContent = 'Vous diffusez en direct !';
+                            }).catch(error => {
+                                console.error('Erreur WebRTC détaillée:', error);
+                                statusMessage.textContent = 'Erreur WebRTC: ' + error.message;
+                            });
+                        }
+                    };
+                    peerConnection.oniceconnectionstatechange = () => {
+                        console.log('État ICE:', peerConnection.iceConnectionState);
+                        if (peerConnection.iceConnectionState === 'failed') {
+                            statusMessage.textContent = 'Échec de la connexion ICE. Vérifiez réseau/ports.';
+                        }
+                    };
+
+                    const offer = await peerConnection.createOffer({
+                        offerToReceiveAudio: false,
+                        offerToReceiveVideo: false
+                    });
+                    await peerConnection.setLocalDescription(offer);
+                } catch (error) {
+                    console.error('Erreur WebRTC:', error);
+                    statusMessage.textContent = 'Erreur WebRTC: ' + error.message;
+                    stopStream();
+                }
+            }
+
+            function stopStream() {
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                    preview.srcObject = null;
+                    stream = null;
+                }
+                if (peerConnection) {
+                    peerConnection.close();
+                    peerConnection = null;
+                }
+                approveBtn.style.display = 'none';
+                rejectBtn.style.display = 'none';
+                stopBtn.style.display = 'none';
+            }
+
+            function updateQueuePosition() {
+                fetch('/api/queue/' + sessionId + '/spectators')
+                    .then(response => response.json())
+                    .then(data => {
+                        const spectator = data.find(s => s.spectator_id === spectatorId);
+                        if (spectator) {
+                            const before = spectator.queue_position;
+                            const after = data.filter(s => s.status === 'pending' && s.timestamp > spectator.timestamp).length;
+                            queuePosition.textContent = `Votre position : ${before + 1} (Avant : ${before}, Après : ${after})`;
+                        }
+                    });
+            }
+
+            setInterval(updateQueuePosition, 5000);
+        });
+    </script>
+</body>
+</html>
