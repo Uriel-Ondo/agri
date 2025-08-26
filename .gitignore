@@ -16,10 +16,10 @@ dist/
 build/
 
 # Fichiers d'environnement
-.env
-.env.docker
-.env.local
-*.env
+#.env
+#.env.docker
+#.env.local
+#*.env
 
 # Fichiers Docker
 docker-compose.override.yml
